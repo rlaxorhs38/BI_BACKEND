@@ -1,0 +1,1017 @@
+var axios = require('axios');
+var moment = require('moment');
+const db = require('../../config/db')
+
+exports.getMakeDataDate = (req, res) => {
+    console.log("============== getMakeDataDate Call ======================");
+    let sql = "SELECT TO_CHAR(MAX(CREATEDATE), 'YY.MM.DD') CREATEDATE FROM BIWE010"
+
+    axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
+};
+
+exports.getWeeklySale = (req, res) => {
+    console.log("============== getWeeklySale Call ======================");
+    let selectSucd = req.body.params.selectSucd
+    let selectComcd = 1
+    let brcd
+    
+    let seasonStartYear = req.body.params.seasonStartYear
+    let seasonStartMonth = req.body.params.seasonStartMonth
+    let seasonEndYear = req.body.params.seasonEndYear
+    let seasonEndMonth = req.body.params.seasonEndMonth
+
+    let seasonStart = seasonStartYear + seasonStartMonth
+    let seasonEnd = seasonEndYear + seasonEndMonth
+
+    let lastseasonStartYear = req.body.params.lastseasonStartYear
+    let lastseasonStartMonth = req.body.params.lastseasonStartMonth
+    let lastseasonEndYear = req.body.params.lastseasonEndYear
+    let lastseasonEndMonth = req.body.params.lastseasonEndMonth
+
+    let lastseasonStart = lastseasonStartYear + lastseasonStartMonth
+    let lastseasonEnd = lastseasonEndYear + lastseasonEndMonth
+
+    let choiceDay = req.body.params.choiceDay
+    let choiceBe1Day = req.body.params.choiceBe1Day
+
+    if(selectSucd == 3) { // SO 사업부만 selectComcd 2
+        selectComcd = 2
+    }
+
+    if(selectSucd == 1) { // MI사업부
+        brcd = "BRCD = 'MI'"
+    } else if(selectSucd == 12) { // MO사업부
+        brcd = "BRCD = 'MI'"
+    } else if(selectSucd == 4) { // IT사업부
+        brcd = "BRCD = 'IT'"
+    } else if(selectSucd == 3) { // SO사업부
+        brcd = "BRCD = 'SO'"
+    } else if(selectSucd == 21) { // FO사업부
+        brcd = "BRCD IN ('MI','IT','SO')"
+    }
+
+
+
+    /*
+    주간판매동향
+    2019.11.07 by hijin
+    VI_COMCD  -- 회사
+    VI_SUCD   -- 사업부
+    VI_BRCD   -- 브랜드
+    VI_DT     -- 기준일
+    VI_JDT    -- 기준일 1년전 같은 요일
+    VI_FYSCD  -- From시즌
+    VI_TYSCD  -- To시즌
+    VI_JFYSCD -- 전년도 From시즌
+    VI_JTYSCD  -- 전년도 To시즌
+    */
+
+    let sql = ""
+    sql += "SELECT SEASON, YSCD, "
+    /* 당년주간 */
+    sql += "SUM(INQTY) INQTY, "
+    sql += "SUM(INAMT) INAMT, "
+    sql += "SUM(SW7QTY) SW7QTY, SUM(SW6QTY) SW6QTY, SUM(SW5QTY) SW5QTY, "
+    sql += "SUM(SW4QTY) SW4QTY, SUM(SW3QTY) SW3QTY, SUM(SW2QTY) SW2QTY, SUM(SW1QTY) SW1QTY, "
+    /* 당년누계 */
+    sql += "SUM(SALQTY) SALQTY, "
+    sql += "SUM(SALAMT) SALAMT, "
+    sql += "SUM(NSW7QTY) NSW7QTY, SUM(NSW6QTY) NSW6QTY, SUM(NSW5QTY) NSW5QTY, "
+    sql += "SUM(NSW4QTY) NSW4QTY, SUM(NSW3QTY) NSW3QTY, SUM(NSW2QTY) NSW2QTY, SUM(NSW1QTY) NSW1QTY, "
+    /* 당년% */
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(SALQTY)/SUM(INQTY)*100 END) INQTYPER, "
+    sql += "ROUND(CASE WHEN SUM(INAMT) =0 THEN 0 ELSE SUM(SALAMT)/SUM(INAMT)*100 END) INAMTPER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW7QTY)/SUM(INQTY)*100 END) SW7PER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW6QTY)/SUM(INQTY)*100 END) SW6PER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW5QTY)/SUM(INQTY)*100 END) SW5PER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW4QTY)/SUM(INQTY)*100 END) SW4PER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW3QTY)/SUM(INQTY)*100 END) SW3PER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW2QTY)/SUM(INQTY)*100 END) SW2PER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW1QTY)/SUM(INQTY)*100 END) SW1PER, "
+    sql += "JREFNM, JYSCD, "
+    /* 전년주간 */ 
+    sql += "SUM(JINQTY) JINQTY, "
+    sql += "SUM(JINAMT) JINAMT, "
+    sql += "SUM(JSW7QTY) JSW7QTY, SUM(JSW6QTY) JSW6QTY, SUM(JSW5QTY) JSW5QTY, "
+    sql += "SUM(JSW4QTY) JSW4QTY, SUM(JSW3QTY) JSW3QTY, SUM(JSW2QTY) JSW2QTY, SUM(JSW1QTY) JSW1QTY, "
+    /* 전년누계 */
+    sql += "SUM(JSALQTY) JSALQTY, "
+    sql += "SUM(JSALAMT) JSALAMT, "
+    sql += "SUM(JNSW7QTY) JNSW7QTY, SUM(JNSW6QTY) JNSW6QTY, SUM(JNSW5QTY) JNSW5QTY, "
+    sql += "SUM(JNSW4QTY) JNSW4QTY, SUM(JNSW3QTY) JNSW3QTY, SUM(JNSW2QTY) JNSW2QTY, SUM(JNSW1QTY) JNSW1QTY, "
+    /* 전년% */
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JSALQTY)/SUM(JINQTY)*100 END) JINQTYPER, "
+    sql += "ROUND(CASE WHEN SUM(JINAMT) =0 THEN 0 ELSE SUM(JSALAMT)/SUM(JINAMT)*100 END) JINAMTPER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW7QTY)/SUM(JINQTY)*100 END) JSW7PER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW6QTY)/SUM(JINQTY)*100 END) JSW6PER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW5QTY)/SUM(JINQTY)*100 END) JSW5PER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW4QTY)/SUM(JINQTY)*100 END) JSW4PER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW3QTY)/SUM(JINQTY)*100 END) JSW3PER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW2QTY)/SUM(JINQTY)*100 END) JSW2PER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW1QTY)/SUM(JINQTY)*100 END) JSW1PER, "
+    /* 택가/판매가/할인율 */
+    sql += "ROUND(CASE WHEN SUM(NVL(INQTY,0)) = 0 THEN 0 ELSE SUM(INAMT)/SUM(INQTY) END) PRICE, "
+    sql += "ROUND(CASE WHEN SUM(NVL(JINQTY,0)) = 0 THEN 0 ELSE SUM(JINAMT)/SUM(JINQTY) END) JPRICE, "
+    sql += "ROUND(CASE WHEN SUM(NVL(SALQTY,0)) = 0 THEN 0 ELSE SUM(SALAMT)/SUM(SALQTY) END) PRICE1, "
+    sql += "ROUND(CASE WHEN SUM(NVL(JSALQTY,0)) = 0 THEN 0 ELSE SUM(JSALAMT)/SUM(JSALQTY) END) JPRICE1, "
+    sql += "CASE WHEN SUM(SALQTY)=0 OR SUM(INQTY)=0 THEN 0 ELSE ROUND((1 - ((SUM(SALAMT)/SUM(SALQTY))/(SUM(INAMT)/SUM(INQTY))))*100) END SWRPICEPER, "
+    sql += "CASE WHEN SUM(SALQTY)=0  OR SUM(JINQTY)=0 THEN 0 ELSE ROUND((1 - ((SUM(JSALAMT)/SUM(JSALQTY))/(SUM(JINAMT)/SUM(JINQTY))))*100) END JSWRPICEPER, "
+    sql += "DISPNO "
+    sql += "FROM "
+    sql += "(SELECT SEASON, YSCD, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SQTY) ELSE 0 END INQTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SAMT) ELSE 0 END INAMT, "
+    sql += "GU GU1, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW7QTY) ELSE 0 END SW7QTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW6QTY) ELSE 0 END SW6QTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW5QTY) ELSE 0 END SW5QTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW4QTY) ELSE 0 END SW4QTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW3QTY) ELSE 0 END SW3QTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW2QTY) ELSE 0 END SW2QTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW1QTY) ELSE 0 END SW1QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SQTY) ELSE 0 END SALQTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SAMT) ELSE 0 END SALAMT, "
+    sql += "GU, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW7QTY) ELSE 0 END NSW7QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW6QTY) ELSE 0 END NSW6QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW5QTY) ELSE 0 END NSW5QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW4QTY) ELSE 0 END NSW4QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW3QTY) ELSE 0 END NSW3QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW2QTY) ELSE 0 END NSW2QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW1QTY) ELSE 0 END NSW1QTY, "
+    sql += "JREFNM, JYSCD, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSQTY) ELSE 0 END JINQTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSAMT) ELSE 0 END JINAMT, "
+    sql += "JGU JGU1, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW7QTY) ELSE 0 END JSW7QTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW6QTY) ELSE 0 END JSW6QTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW5QTY) ELSE 0 END JSW5QTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW4QTY) ELSE 0 END JSW4QTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW3QTY) ELSE 0 END JSW3QTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW2QTY) ELSE 0 END JSW2QTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW1QTY) ELSE 0 END JSW1QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSQTY) ELSE 0 END JSALQTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSAMT) ELSE 0 END JSALAMT, "
+    sql += "JGU, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW7QTY) ELSE 0 END JNSW7QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW6QTY) ELSE 0 END JNSW6QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW5QTY) ELSE 0 END JNSW5QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW4QTY) ELSE 0 END JNSW4QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW3QTY) ELSE 0 END JNSW3QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW2QTY) ELSE 0 END JNSW2QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW1QTY) ELSE 0 END JNSW1QTY, "
+    sql += "DISPNO "
+    sql += "FROM "
+    sql += "( "
+    sql += "SELECT 'WEEK' GU, SEASON, YSCD, DISPNO, "
+    sql += "SQTY, SAMT, SW7QTY, SW6QTY, SW5QTY, SW4QTY, SW3QTY, SW2QTY, SW1QTY, "
+    sql += "SEASON JREFNM, SUBSTR('"+lastseasonStart+"',1,1)||SUBSTR(YSCD,2,1) JYSCD, 'WEEK' JGU, "
+    sql += "0 JSQTY, 0 JSAMT, 0 JSW7QTY, 0 JSW6QTY, 0 JSW5QTY, 0 JSW4QTY, 0 JSW3QTY, 0 JSW2QTY, 0 JSW1QTY "
+    sql += "FROM "
+    sql += "(SELECT COMCD, SUCD, BRCD, SEASON, YSCD, DISPNO, "
+    sql += "CASE WHEN COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" THEN SUM(INQTY-CHINAQTY) ELSE SUM(INQTY) END SQTY, "
+    sql += "CASE WHEN COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" THEN SUM(INTAGPRI-CHINAPRI) ELSE SUM(SILAMT) END SAMT, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-48 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-42 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW7QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-41 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-35 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW6QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-34 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW5QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-27 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW4QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-20 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW3QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-13 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW2QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') AND '"+choiceDay+"' THEN SQTY ELSE 0 END) SW1QTY "
+    sql += "FROM BIWE010 "
+    sql += "WHERE COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" "
+    sql += "AND YSCD BETWEEN '"+seasonStart+"' AND '"+seasonEnd+"' "
+    sql += "AND INOUTDT <= '"+choiceDay+"' "
+    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIWE010) "
+    sql += "GROUP BY COMCD, SUCD, BRCD, SEASON, YSCD, DISPNO) WEEK "
+    sql += "UNION ALL "
+    sql += "SELECT 'ACC' GU, SEASON, YSCD, DISPNO, "
+    sql += "SALEQTY SQTY, SAMT, "
+    sql += "SQTY+SW7QTY SW7QTY, "
+    sql += "SQTY+SW7QTY+SW6QTY SW6QTY, "
+    sql += "SQTY+SW7QTY+SW6QTY+SW5QTY SW5QTY, "
+    sql += "SQTY+SW7QTY+SW6QTY+SW5QTY+SW4QTY SW4QTY, "
+    sql += "SQTY+SW7QTY+SW6QTY+SW5QTY+SW4QTY+SW3QTY SW3QTY, "
+    sql += "SQTY+SW7QTY+SW6QTY+SW5QTY+SW4QTY+SW3QTY+SW2QTY SW2QTY, "
+    sql += "SQTY+SW7QTY+SW6QTY+SW5QTY+SW4QTY+SW3QTY+SW2QTY+SW1QTY SW1QTY, "
+    sql += "SEASON JREFNM, SUBSTR('"+lastseasonStart+"',1,1)||SUBSTR(YSCD,2,1) JYSCD, 'WEEK' JGU, "
+    sql += "0 JSQTY, 0 JSAMT, 0 JSW7QTY, 0 JSW6QTY, 0 JSW5QTY, 0 JSW4QTY, 0 JSW3QTY, 0 JSW2QTY, 0 JSW1QTY "
+    sql += "FROM "
+    sql += "(SELECT COMCD, SUCD, BRCD, SEASON, YSCD, DISPNO, "
+    sql += "SUM(SQTY) SALEQTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-49 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SQTY, "
+    sql += "SUM(STAGPRI) SAMT, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-48 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-42 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW7QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-41 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-35 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW6QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-34 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW5QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-27 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW4QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-20 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW3QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-13 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW2QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') AND '"+choiceDay+"' THEN SQTY ELSE 0 END) SW1QTY "
+    sql += "FROM BIWE010 "
+    sql += "WHERE COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" "
+    sql += "AND YSCD BETWEEN '"+seasonStart+"' AND '"+seasonEnd+"' "
+    sql += "AND INOUTDT <= '"+choiceDay+"' "
+    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIWE010) "
+    sql += "GROUP BY COMCD, SUCD, BRCD, SEASON, YSCD, DISPNO) ACCWEEK "
+    sql += "UNION ALL "
+    sql += "SELECT 'WEEK' GU, SEASON SEASON, SUBSTR('"+seasonStart+"',1,1)||SUBSTR(YSCD,2,1) YSCD, DISPNO, "
+    sql += "0 SQTY, 0 SAMT, 0 SW7QTY, 0 SW6QTY, 0 SW5QTY, 0 SW4QTY, 0 SW3QTY, 0 SW2QTY, 0 SW1QTY, "
+    sql += "SEASON JREFNM, YSCD JYSCD, 'WEEK' JGU, "
+    sql += "SQTY, SAMT, JSW7QTY, JSW6QTY, JSW5QTY, JSW4QTY, JSW3QTY, JSW2QTY, JSW1QTY "
+    sql += "FROM "
+    sql += "(SELECT COMCD, SUCD, BRCD, SEASON, YSCD, DISPNO, "
+    sql += "CASE WHEN COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" THEN SUM(INQTY-CHINAQTY) ELSE SUM(INQTY) END SQTY, "
+    sql += "CASE WHEN COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" THEN SUM(INTAGPRI-CHINAPRI) ELSE SUM(SILAMT) END SAMT, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-34 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW7QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-27 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW6QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-20 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW5QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-13 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW4QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') AND '"+choiceBe1Day+"' THEN SQTY ELSE 0 END) JSW3QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/1 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW2QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/8 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW1QTY "
+    sql += "FROM BIWE010 "
+    sql += "WHERE COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" "
+    sql += "AND YSCD BETWEEN '"+lastseasonStart+"' AND '"+lastseasonEnd+"' "
+    // sql += "AND INOUTDT <= '"+choiceBe1Day+"' "
+    sql += "AND INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/14 0:0:0'),'YYYYMMDD') "
+    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIWE010) "
+    sql += "GROUP BY COMCD, SUCD, BRCD, SEASON, YSCD, DISPNO) JWEEK "
+    sql += "UNION ALL "
+    sql += "SELECT 'ACC' GU, SEASON SEASON, SUBSTR('"+seasonStart+"',1,1)||SUBSTR(YSCD,2,1) YSCD, DISPNO, "
+    sql += "0 SQTY, 0 SAMT, "
+    sql += "0 SW7QTY, 0 SW6QTY, 0 SW5QTY, 0 SW4QTY, 0 SW3QTY, 0 SW2QTY, 0 SW1QTY, "
+    sql += "SEASON JREFNM, YSCD JYSCD, 'ACC' JGU, "
+    sql += "SALEQTY JSQTY, SAMT JSAMT, "
+    sql += "SQTY+JSW7QTY JSW7QTY, "
+    sql += "SQTY+JSW7QTY+JSW6QTY JSW6QTY, "
+    sql += "SQTY+JSW7QTY+JSW6QTY+JSW5QTY JSW5QTY, "
+    sql += "SQTY+JSW7QTY+JSW6QTY+JSW5QTY+JSW4QTY JSW4QTY, "
+    sql += "SQTY+JSW7QTY+JSW6QTY+JSW5QTY+JSW4QTY+JSW3QTY JSW3QTY, "
+    sql += "SQTY+JSW7QTY+JSW6QTY+JSW5QTY+JSW4QTY+JSW3QTY+JSW2QTY JSW2QTY, "
+    sql += "SQTY+JSW7QTY+JSW6QTY+JSW5QTY+JSW4QTY+JSW3QTY+JSW2QTY+JSW1QTY JSW1QTY "
+    sql += "FROM "
+    sql += "(SELECT COMCD, SUCD, BRCD, SEASON, YSCD, DISPNO, "
+    sql += "SUM(SQTY) SALEQTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-35 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SQTY, "
+    sql += "SUM(STAGPRI) SAMT, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-34 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW7QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-27 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW6QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-20 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW5QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-13 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW4QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') AND '"+choiceBe1Day+"' THEN SQTY ELSE 0 END) JSW3QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/1 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW2QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/8 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW1QTY "
+    sql += "FROM BIWE010 "
+    sql += "WHERE COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" "
+    sql += "AND YSCD BETWEEN '"+lastseasonStart+"' AND '"+lastseasonEnd+"' "
+    // sql += "AND INOUTDT <= '"+choiceBe1Day+"' "
+    sql += "AND INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/14 0:0:0'),'YYYYMMDD') "
+    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIWE010) "
+    sql += "GROUP BY COMCD, SUCD, BRCD, SEASON, YSCD, DISPNO) JACCWEEK "
+    sql += ") T "
+    sql += "GROUP BY SEASON, YSCD, GU, JREFNM, JYSCD, JGU, DISPNO "
+    sql += ")TT "
+    sql += "GROUP BY SEASON, YSCD, JREFNM, JYSCD, DISPNO "
+    sql += "ORDER BY DISPNO, YSCD "
+
+    console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" + sql)
+
+    axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
+};
+
+exports.getWeeklySSUM = (req, res) => {
+    console.log("============== getWeeklySSUM Call ======================");
+    let selectSucd = req.body.params.selectSucd
+    let selectComcd = 1
+    let brcd
+    
+    let seasonStartYear = req.body.params.seasonStartYear
+    let seasonStartMonth = req.body.params.seasonStartMonth
+    let seasonEndYear = req.body.params.seasonEndYear
+    let seasonEndMonth = req.body.params.seasonEndMonth
+
+    let seasonStart = seasonStartYear + seasonStartMonth
+    let seasonEnd = seasonEndYear + seasonEndMonth
+
+    let lastseasonStartYear = req.body.params.lastseasonStartYear
+    let lastseasonStartMonth = req.body.params.lastseasonStartMonth
+    let lastseasonEndYear = req.body.params.lastseasonEndYear
+    let lastseasonEndMonth = req.body.params.lastseasonEndMonth
+
+    let lastseasonStart = lastseasonStartYear + lastseasonStartMonth
+    let lastseasonEnd = lastseasonEndYear + lastseasonEndMonth
+
+    let choiceDay = req.body.params.choiceDay
+    let choiceBe1Day = req.body.params.choiceBe1Day
+
+    if(selectSucd == 3) { // SO 사업부만 selectComcd 2
+        selectComcd = 2
+    }
+
+    if(selectSucd == 1) { // MI사업부
+        brcd = "BRCD = 'MI'"
+    } else if(selectSucd == 12) { // MO사업부
+        brcd = "BRCD = 'MI'"
+    } else if(selectSucd == 4) { // IT사업부
+        brcd = "BRCD = 'IT'"
+    } else if(selectSucd == 3) { // SO사업부
+        brcd = "BRCD = 'SO'"
+    } else if(selectSucd == 21) { // FO사업부
+        brcd = "BRCD IN ('MI','IT','SO')"
+    }
+
+    /*
+    주간판매동향
+    2019.11.07 by hijin
+    VI_COMCD  -- 회사
+    VI_SUCD   -- 사업부
+    VI_BRCD   -- 브랜드
+    VI_DT     -- 기준일
+    VI_JDT    -- 기준일 1년전 같은 요일
+    VI_FYSCD  -- From시즌
+    VI_TYSCD  -- To시즌
+    VI_JFYSCD -- 전년도 From시즌
+    VI_JTYSCD  -- 전년도 To시즌
+    */
+
+    let sql = ""
+    sql += "SELECT SEASON, YSCD, "
+    /* 당년주간 */
+    sql += "SUM(INQTY) INQTY, "
+    sql += "SUM(INAMT) INAMT, "
+    sql += "SUM(SW7QTY) SW7QTY, SUM(SW6QTY) SW6QTY, SUM(SW5QTY) SW5QTY, "
+    sql += "SUM(SW4QTY) SW4QTY, SUM(SW3QTY) SW3QTY, SUM(SW2QTY) SW2QTY, SUM(SW1QTY) SW1QTY, "
+    /* 당년누계 */
+    sql += "SUM(SALQTY) SALQTY, "
+    sql += "SUM(SALAMT) SALAMT, "
+    sql += "SUM(NSW7QTY) NSW7QTY, SUM(NSW6QTY) NSW6QTY, SUM(NSW5QTY) NSW5QTY, "
+    sql += "SUM(NSW4QTY) NSW4QTY, SUM(NSW3QTY) NSW3QTY, SUM(NSW2QTY) NSW2QTY, SUM(NSW1QTY) NSW1QTY, "
+    /* 당년% */
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(SALQTY)/SUM(INQTY)*100 END) INQTYPER, "
+    sql += "ROUND(CASE WHEN SUM(INAMT) =0 THEN 0 ELSE SUM(SALAMT)/SUM(INAMT)*100 END) INAMTPER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW7QTY)/SUM(INQTY)*100 END) SW7PER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW6QTY)/SUM(INQTY)*100 END) SW6PER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW5QTY)/SUM(INQTY)*100 END) SW5PER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW4QTY)/SUM(INQTY)*100 END) SW4PER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW3QTY)/SUM(INQTY)*100 END) SW3PER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW2QTY)/SUM(INQTY)*100 END) SW2PER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW1QTY)/SUM(INQTY)*100 END) SW1PER, "
+    sql += "JREFNM, "
+    /* 전년주간 */ 
+    sql += "SUM(JINQTY) JINQTY, "
+    sql += "SUM(JINAMT) JINAMT, "
+    sql += "SUM(JSW7QTY) JSW7QTY, SUM(JSW6QTY) JSW6QTY, SUM(JSW5QTY) JSW5QTY, "
+    sql += "SUM(JSW4QTY) JSW4QTY, SUM(JSW3QTY) JSW3QTY, SUM(JSW2QTY) JSW2QTY, SUM(JSW1QTY) JSW1QTY, "
+    /* 전년누계 */
+    sql += "SUM(JSALQTY) JSALQTY, "
+    sql += "SUM(JSALAMT) JSALAMT, "
+    sql += "SUM(JNSW7QTY) JNSW7QTY, SUM(JNSW6QTY) JNSW6QTY, SUM(JNSW5QTY) JNSW5QTY, "
+    sql += "SUM(JNSW4QTY) JNSW4QTY, SUM(JNSW3QTY) JNSW3QTY, SUM(JNSW2QTY) JNSW2QTY, SUM(JNSW1QTY) JNSW1QTY, "
+    /* 전년% */
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JSALQTY)/SUM(JINQTY)*100 END) JINQTYPER, "
+    sql += "ROUND(CASE WHEN SUM(JINAMT) =0 THEN 0 ELSE SUM(JSALAMT)/SUM(JINAMT)*100 END) JINAMTPER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW7QTY)/SUM(JINQTY)*100 END) JSW7PER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW6QTY)/SUM(JINQTY)*100 END) JSW6PER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW5QTY)/SUM(JINQTY)*100 END) JSW5PER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW4QTY)/SUM(JINQTY)*100 END) JSW4PER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW3QTY)/SUM(JINQTY)*100 END) JSW3PER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW2QTY)/SUM(JINQTY)*100 END) JSW2PER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW1QTY)/SUM(JINQTY)*100 END) JSW1PER, "
+    /* 택가/판매가/할인율 */
+    sql += "ROUND(CASE WHEN SUM(NVL(INQTY,0)) = 0 THEN 0 ELSE SUM(INAMT)/SUM(INQTY) END) PRICE, "
+    sql += "ROUND(CASE WHEN SUM(NVL(JINQTY,0)) = 0 THEN 0 ELSE SUM(JINAMT)/SUM(JINQTY) END) JPRICE, "
+    sql += "ROUND(CASE WHEN SUM(NVL(SALQTY,0)) = 0 THEN 0 ELSE SUM(SALAMT)/SUM(SALQTY) END) PRICE1, "
+    sql += "ROUND(CASE WHEN SUM(NVL(JSALQTY,0)) = 0 THEN 0 ELSE SUM(JSALAMT)/SUM(JSALQTY) END) JPRICE1, "
+    sql += "CASE WHEN SUM(SALQTY)=0 OR SUM(INQTY)=0 THEN 0 ELSE ROUND((1 - ((SUM(SALAMT)/SUM(SALQTY))/(SUM(INAMT)/SUM(INQTY))))*100) END SWRPICEPER, "
+    sql += "CASE WHEN SUM(SALQTY)=0  OR SUM(JINQTY)=0 THEN 0 ELSE ROUND((1 - ((SUM(JSALAMT)/SUM(JSALQTY))/(SUM(JINAMT)/SUM(JINQTY))))*100) END JSWRPICEPER, "
+    sql += "DISPNO "
+    sql += "FROM "
+    sql += "(SELECT SEASON, YSCD, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SQTY) ELSE 0 END INQTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SAMT) ELSE 0 END INAMT, "
+    sql += "GU GU1, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW7QTY) ELSE 0 END SW7QTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW6QTY) ELSE 0 END SW6QTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW5QTY) ELSE 0 END SW5QTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW4QTY) ELSE 0 END SW4QTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW3QTY) ELSE 0 END SW3QTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW2QTY) ELSE 0 END SW2QTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW1QTY) ELSE 0 END SW1QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SQTY) ELSE 0 END SALQTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SAMT) ELSE 0 END SALAMT, "
+    sql += "GU, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW7QTY) ELSE 0 END NSW7QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW6QTY) ELSE 0 END NSW6QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW5QTY) ELSE 0 END NSW5QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW4QTY) ELSE 0 END NSW4QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW3QTY) ELSE 0 END NSW3QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW2QTY) ELSE 0 END NSW2QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW1QTY) ELSE 0 END NSW1QTY, "
+    sql += "JREFNM, JYSCD, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSQTY) ELSE 0 END JINQTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSAMT) ELSE 0 END JINAMT, "
+    sql += "JGU JGU1, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW7QTY) ELSE 0 END JSW7QTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW6QTY) ELSE 0 END JSW6QTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW5QTY) ELSE 0 END JSW5QTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW4QTY) ELSE 0 END JSW4QTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW3QTY) ELSE 0 END JSW3QTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW2QTY) ELSE 0 END JSW2QTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW1QTY) ELSE 0 END JSW1QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSQTY) ELSE 0 END JSALQTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSAMT) ELSE 0 END JSALAMT, "
+    sql += "JGU, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW7QTY) ELSE 0 END JNSW7QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW6QTY) ELSE 0 END JNSW6QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW5QTY) ELSE 0 END JNSW5QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW4QTY) ELSE 0 END JNSW4QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW3QTY) ELSE 0 END JNSW3QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW2QTY) ELSE 0 END JNSW2QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW1QTY) ELSE 0 END JNSW1QTY, "
+    sql += "DISPNO "
+    sql += "FROM "
+    sql += "( "
+    sql += "SELECT 'WEEK' GU, SEASON, 'SSUM' YSCD, DISPNO, "
+    sql += "SQTY, SAMT, SW7QTY, SW6QTY, SW5QTY, SW4QTY, SW3QTY, SW2QTY, SW1QTY, "
+    sql += "SEASON JREFNM, 'SSUM' JYSCD, 'WEEK' JGU, "
+    sql += "0 JSQTY, 0 JSAMT, 0 JSW7QTY, 0 JSW6QTY, 0 JSW5QTY, 0 JSW4QTY, 0 JSW3QTY, 0 JSW2QTY, 0 JSW1QTY "
+    sql += "FROM "
+    sql += "(SELECT COMCD, SUCD, BRCD, SEASON, DISPNO, "
+    sql += "CASE WHEN COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" THEN SUM(INQTY-CHINAQTY) ELSE SUM(INQTY) END SQTY, "
+    sql += "CASE WHEN COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" THEN SUM(INTAGPRI-CHINAPRI) ELSE SUM(SILAMT) END SAMT, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-48 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-42 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW7QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-41 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-35 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW6QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-34 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW5QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-27 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW4QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-20 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW3QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-13 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW2QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') AND '"+choiceDay+"' THEN SQTY ELSE 0 END) SW1QTY "
+    sql += "FROM BIWE010 "
+    sql += "WHERE COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" "
+    sql += "AND YSCD BETWEEN '"+seasonStart+"' AND '"+seasonEnd+"' "
+    sql += "AND INOUTDT <= '"+choiceDay+"' "
+    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIWE010) "
+    sql += "GROUP BY COMCD, SUCD, BRCD, SEASON, DISPNO) WEEK "
+    sql += "UNION ALL "
+    sql += "SELECT 'ACC' GU, SEASON, 'SSUM' YSCD, DISPNO, "
+    sql += "SALEQTY SQTY, SAMT, "
+    sql += "SQTY+SW7QTY SW7QTY, "
+    sql += "SQTY+SW7QTY+SW6QTY SW6QTY, "
+    sql += "SQTY+SW7QTY+SW6QTY+SW5QTY SW5QTY, "
+    sql += "SQTY+SW7QTY+SW6QTY+SW5QTY+SW4QTY SW4QTY, "
+    sql += "SQTY+SW7QTY+SW6QTY+SW5QTY+SW4QTY+SW3QTY SW3QTY, "
+    sql += "SQTY+SW7QTY+SW6QTY+SW5QTY+SW4QTY+SW3QTY+SW2QTY SW2QTY, "
+    sql += "SQTY+SW7QTY+SW6QTY+SW5QTY+SW4QTY+SW3QTY+SW2QTY+SW1QTY SW1QTY, "
+    sql += "SEASON JREFNM, 'SSUM' JYSCD, 'WEEK' JGU, "
+    sql += "0 JSQTY, 0 JSAMT, 0 JSW7QTY, 0 JSW6QTY, 0 JSW5QTY, 0 JSW4QTY, 0 JSW3QTY, 0 JSW2QTY, 0 JSW1QTY "
+    sql += "FROM "
+    sql += "(SELECT COMCD, SUCD, BRCD, SEASON, DISPNO, "
+    sql += "SUM(SQTY) SALEQTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-49 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SQTY, "
+    sql += "SUM(STAGPRI) SAMT, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-48 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-42 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW7QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-41 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-35 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW6QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-34 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW5QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-27 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW4QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-20 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW3QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-13 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW2QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') AND '"+choiceDay+"' THEN SQTY ELSE 0 END) SW1QTY "
+    sql += "FROM BIWE010 "
+    sql += "WHERE COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" "
+    sql += "AND YSCD BETWEEN '"+seasonStart+"' AND '"+seasonEnd+"' "
+    sql += "AND INOUTDT <= '"+choiceDay+"' "
+    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIWE010) "
+    sql += "GROUP BY COMCD, SUCD, BRCD, SEASON, DISPNO) ACCWEEK "
+    sql += "UNION ALL "
+    sql += "SELECT 'WEEK' GU, SEASON SEASON, 'SSUM' YSCD, DISPNO, "
+    sql += "0 SQTY, 0 SAMT, 0 SW7QTY, 0 SW6QTY, 0 SW5QTY, 0 SW4QTY, 0 SW3QTY, 0 SW2QTY, 0 SW1QTY, "
+    sql += "SEASON JREFNM, 'SSUM' JYSCD, 'WEEK' JGU, "
+    sql += "SQTY, SAMT, JSW7QTY, JSW6QTY, JSW5QTY, JSW4QTY, JSW3QTY, JSW2QTY, JSW1QTY "
+    sql += "FROM "
+    sql += "(SELECT COMCD, SUCD, BRCD, SEASON, DISPNO, "
+    sql += "CASE WHEN COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" THEN SUM(INQTY-CHINAQTY) ELSE SUM(INQTY) END SQTY, "
+    sql += "CASE WHEN COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" THEN SUM(INTAGPRI-CHINAPRI) ELSE SUM(SILAMT) END SAMT, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-34 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW7QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-27 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW6QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-20 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW5QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-13 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW4QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') AND '"+choiceBe1Day+"' THEN SQTY ELSE 0 END) JSW3QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/1 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW2QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/8 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW1QTY "
+    sql += "FROM BIWE010 "
+    sql += "WHERE COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" "
+    sql += "AND YSCD BETWEEN '"+lastseasonStart+"' AND '"+lastseasonEnd+"' "
+    // sql += "AND INOUTDT <= '"+choiceBe1Day+"' "
+    sql += "AND INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/14 0:0:0'),'YYYYMMDD') "
+    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIWE010) "
+    sql += "GROUP BY COMCD, SUCD, BRCD, SEASON, DISPNO) JWEEK "
+    sql += "UNION ALL "
+    sql += "SELECT 'ACC' GU, SEASON SEASON, 'SSUM' YSCD, DISPNO, "
+    sql += "0 SQTY, 0 SAMT, "
+    sql += "0 SW7QTY, 0 SW6QTY, 0 SW5QTY, 0 SW4QTY, 0 SW3QTY, 0 SW2QTY, 0 SW1QTY, "
+    sql += "SEASON JREFNM, 'SSUM' JYSCD, 'ACC' JGU, "
+    sql += "SALEQTY JSQTY, SAMT JSAMT, "
+    sql += "SQTY+JSW7QTY JSW7QTY, "
+    sql += "SQTY+JSW7QTY+JSW6QTY JSW6QTY, "
+    sql += "SQTY+JSW7QTY+JSW6QTY+JSW5QTY JSW5QTY, "
+    sql += "SQTY+JSW7QTY+JSW6QTY+JSW5QTY+JSW4QTY JSW4QTY, "
+    sql += "SQTY+JSW7QTY+JSW6QTY+JSW5QTY+JSW4QTY+JSW3QTY JSW3QTY, "
+    sql += "SQTY+JSW7QTY+JSW6QTY+JSW5QTY+JSW4QTY+JSW3QTY+JSW2QTY JSW2QTY, "
+    sql += "SQTY+JSW7QTY+JSW6QTY+JSW5QTY+JSW4QTY+JSW3QTY+JSW2QTY+JSW1QTY JSW1QTY "
+    sql += "FROM "
+    sql += "(SELECT COMCD, SUCD, BRCD, SEASON, DISPNO, "
+    sql += "SUM(SQTY) SALEQTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-35 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SQTY, "
+    sql += "SUM(STAGPRI) SAMT, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-34 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW7QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-27 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW6QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-20 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW5QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-13 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW4QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') AND '"+choiceBe1Day+"' THEN SQTY ELSE 0 END) JSW3QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/1 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW2QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/8 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW1QTY "
+    sql += "FROM BIWE010 "
+    sql += "WHERE COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" "
+    sql += "AND YSCD BETWEEN '"+lastseasonStart+"' AND '"+lastseasonEnd+"' "
+    // sql += "AND INOUTDT <= '"+choiceBe1Day+"' "
+    sql += "AND INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/14 0:0:0'),'YYYYMMDD') "
+    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIWE010) "
+    sql += "GROUP BY COMCD, SUCD, BRCD, SEASON, DISPNO) JACCWEEK "
+    sql += ") T "
+    sql += "GROUP BY SEASON, YSCD, GU, JREFNM, JYSCD, JGU, DISPNO "
+    sql += ")TT "
+    sql += "GROUP BY SEASON, YSCD, JREFNM, DISPNO "
+    sql += "ORDER BY DISPNO, YSCD "
+
+    axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
+};
+
+exports.getWeeklyTSUM = (req, res) => {
+    console.log("============== getWeeklyTSUM Call ======================");
+    let selectSucd = req.body.params.selectSucd
+    let selectComcd = 1
+    let brcd
+    
+    let seasonStartYear = req.body.params.seasonStartYear
+    let seasonStartMonth = req.body.params.seasonStartMonth
+    let seasonEndYear = req.body.params.seasonEndYear
+    let seasonEndMonth = req.body.params.seasonEndMonth
+
+    let seasonStart = seasonStartYear + seasonStartMonth
+    let seasonEnd = seasonEndYear + seasonEndMonth
+
+    let lastseasonStartYear = req.body.params.lastseasonStartYear
+    let lastseasonStartMonth = req.body.params.lastseasonStartMonth
+    let lastseasonEndYear = req.body.params.lastseasonEndYear
+    let lastseasonEndMonth = req.body.params.lastseasonEndMonth
+
+    let lastseasonStart = lastseasonStartYear + lastseasonStartMonth
+    let lastseasonEnd = lastseasonEndYear + lastseasonEndMonth
+
+    let choiceDay = req.body.params.choiceDay
+    let choiceBe1Day = req.body.params.choiceBe1Day
+
+    if(selectSucd == 3) { // SO 사업부만 selectComcd 2
+        selectComcd = 2
+    }
+
+    if(selectSucd == 1) { // MI사업부
+        brcd = "BRCD = 'MI'"
+    } else if(selectSucd == 12) { // MO사업부
+        brcd = "BRCD = 'MI'"
+    } else if(selectSucd == 4) { // IT사업부
+        brcd = "BRCD = 'IT'"
+    } else if(selectSucd == 3) { // SO사업부
+        brcd = "BRCD = 'SO'"
+    } else if(selectSucd == 21) { // FO사업부
+        brcd = "BRCD IN ('MI','IT','SO')"
+    }
+
+    /*
+    주간판매동향
+    2019.11.07 by hijin
+    VI_COMCD  -- 회사
+    VI_SUCD   -- 사업부
+    VI_BRCD   -- 브랜드
+    VI_DT     -- 기준일
+    VI_JDT    -- 기준일 1년전 같은 요일
+    VI_FYSCD  -- From시즌
+    VI_TYSCD  -- To시즌
+    VI_JFYSCD -- 전년도 From시즌
+    VI_JTYSCD  -- 전년도 To시즌
+    */
+
+    let sql = ""
+    sql += "SELECT SEASON, YSCD, "
+    /* 당년주간 */
+    sql += "SUM(INQTY) INQTY, "
+    sql += "SUM(INAMT) INAMT, "
+    sql += "SUM(SW7QTY) SW7QTY, SUM(SW6QTY) SW6QTY, SUM(SW5QTY) SW5QTY, "
+    sql += "SUM(SW4QTY) SW4QTY, SUM(SW3QTY) SW3QTY, SUM(SW2QTY) SW2QTY, SUM(SW1QTY) SW1QTY, "
+    /* 당년누계 */
+    sql += "SUM(SALQTY) SALQTY, "
+    sql += "SUM(SALAMT) SALAMT, "
+    sql += "SUM(NSW7QTY) NSW7QTY, SUM(NSW6QTY) NSW6QTY, SUM(NSW5QTY) NSW5QTY, "
+    sql += "SUM(NSW4QTY) NSW4QTY, SUM(NSW3QTY) NSW3QTY, SUM(NSW2QTY) NSW2QTY, SUM(NSW1QTY) NSW1QTY, "
+    /* 당년% */
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(SALQTY)/SUM(INQTY)*100 END) INQTYPER, "
+    sql += "ROUND(CASE WHEN SUM(INAMT) =0 THEN 0 ELSE SUM(SALAMT)/SUM(INAMT)*100 END) INAMTPER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW7QTY)/SUM(INQTY)*100 END) SW7PER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW6QTY)/SUM(INQTY)*100 END) SW6PER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW5QTY)/SUM(INQTY)*100 END) SW5PER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW4QTY)/SUM(INQTY)*100 END) SW4PER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW3QTY)/SUM(INQTY)*100 END) SW3PER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW2QTY)/SUM(INQTY)*100 END) SW2PER, "
+    sql += "ROUND(CASE WHEN SUM(INQTY) =0 THEN 0 ELSE SUM(NSW1QTY)/SUM(INQTY)*100 END) SW1PER, "
+    sql += "JREFNM, "
+    /* 전년주간 */ 
+    sql += "SUM(JINQTY) JINQTY, "
+    sql += "SUM(JINAMT) JINAMT, "
+    sql += "SUM(JSW7QTY) JSW7QTY, SUM(JSW6QTY) JSW6QTY, SUM(JSW5QTY) JSW5QTY, "
+    sql += "SUM(JSW4QTY) JSW4QTY, SUM(JSW3QTY) JSW3QTY, SUM(JSW2QTY) JSW2QTY, SUM(JSW1QTY) JSW1QTY, "
+    /* 전년누계 */
+    sql += "SUM(JSALQTY) JSALQTY, "
+    sql += "SUM(JSALAMT) JSALAMT, "
+    sql += "SUM(JNSW7QTY) JNSW7QTY, SUM(JNSW6QTY) JNSW6QTY, SUM(JNSW5QTY) JNSW5QTY, "
+    sql += "SUM(JNSW4QTY) JNSW4QTY, SUM(JNSW3QTY) JNSW3QTY, SUM(JNSW2QTY) JNSW2QTY, SUM(JNSW1QTY) JNSW1QTY, "
+    /* 전년% */
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JSALQTY)/SUM(JINQTY)*100 END) JINQTYPER, "
+    sql += "ROUND(CASE WHEN SUM(JINAMT) =0 THEN 0 ELSE SUM(JSALAMT)/SUM(JINAMT)*100 END) JINAMTPER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW7QTY)/SUM(JINQTY)*100 END) JSW7PER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW6QTY)/SUM(JINQTY)*100 END) JSW6PER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW5QTY)/SUM(JINQTY)*100 END) JSW5PER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW4QTY)/SUM(JINQTY)*100 END) JSW4PER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW3QTY)/SUM(JINQTY)*100 END) JSW3PER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW2QTY)/SUM(JINQTY)*100 END) JSW2PER, "
+    sql += "ROUND(CASE WHEN SUM(JINQTY) =0 THEN 0 ELSE SUM(JNSW1QTY)/SUM(JINQTY)*100 END) JSW1PER, "
+    /* 택가/판매가/할인율 */
+    sql += "ROUND(CASE WHEN SUM(NVL(INQTY,0)) = 0 THEN 0 ELSE SUM(INAMT)/SUM(INQTY) END) PRICE, "
+    sql += "ROUND(CASE WHEN SUM(NVL(JINQTY,0)) = 0 THEN 0 ELSE SUM(JINAMT)/SUM(JINQTY) END) JPRICE, "
+    sql += "ROUND(CASE WHEN SUM(NVL(SALQTY,0)) = 0 THEN 0 ELSE SUM(SALAMT)/SUM(SALQTY) END) PRICE1, "
+    sql += "ROUND(CASE WHEN SUM(NVL(JSALQTY,0)) = 0 THEN 0 ELSE SUM(JSALAMT)/SUM(JSALQTY) END) JPRICE1, "
+    sql += "CASE WHEN SUM(SALQTY)=0 OR SUM(INQTY)=0 THEN 0 ELSE ROUND((1 - ((SUM(SALAMT)/SUM(SALQTY))/(SUM(INAMT)/SUM(INQTY))))*100) END SWRPICEPER, "
+    sql += "CASE WHEN SUM(SALQTY)=0  OR SUM(JINQTY)=0 THEN 0 ELSE ROUND((1 - ((SUM(JSALAMT)/SUM(JSALQTY))/(SUM(JINAMT)/SUM(JINQTY))))*100) END JSWRPICEPER, "
+    sql += "DISPNO "
+    sql += "FROM "
+    sql += "(SELECT SEASON, YSCD, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SQTY) ELSE 0 END INQTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SAMT) ELSE 0 END INAMT, "
+    sql += "GU GU1, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW7QTY) ELSE 0 END SW7QTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW6QTY) ELSE 0 END SW6QTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW5QTY) ELSE 0 END SW5QTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW4QTY) ELSE 0 END SW4QTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW3QTY) ELSE 0 END SW3QTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW2QTY) ELSE 0 END SW2QTY, "
+    sql += "CASE WHEN GU='WEEK' THEN SUM(SW1QTY) ELSE 0 END SW1QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SQTY) ELSE 0 END SALQTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SAMT) ELSE 0 END SALAMT, "
+    sql += "GU, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW7QTY) ELSE 0 END NSW7QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW6QTY) ELSE 0 END NSW6QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW5QTY) ELSE 0 END NSW5QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW4QTY) ELSE 0 END NSW4QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW3QTY) ELSE 0 END NSW3QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW2QTY) ELSE 0 END NSW2QTY, "
+    sql += "CASE WHEN GU='ACC' THEN SUM(SW1QTY) ELSE 0 END NSW1QTY, "
+    sql += "JREFNM, JYSCD, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSQTY) ELSE 0 END JINQTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSAMT) ELSE 0 END JINAMT, "
+    sql += "JGU JGU1, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW7QTY) ELSE 0 END JSW7QTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW6QTY) ELSE 0 END JSW6QTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW5QTY) ELSE 0 END JSW5QTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW4QTY) ELSE 0 END JSW4QTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW3QTY) ELSE 0 END JSW3QTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW2QTY) ELSE 0 END JSW2QTY, "
+    sql += "CASE WHEN JGU='WEEK' THEN SUM(JSW1QTY) ELSE 0 END JSW1QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSQTY) ELSE 0 END JSALQTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSAMT) ELSE 0 END JSALAMT, "
+    sql += "JGU, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW7QTY) ELSE 0 END JNSW7QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW6QTY) ELSE 0 END JNSW6QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW5QTY) ELSE 0 END JNSW5QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW4QTY) ELSE 0 END JNSW4QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW3QTY) ELSE 0 END JNSW3QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW2QTY) ELSE 0 END JNSW2QTY, "
+    sql += "CASE WHEN JGU='ACC' THEN SUM(JSW1QTY) ELSE 0 END JNSW1QTY, "
+    sql += "DISPNO "
+    sql += "FROM "
+    sql += "( "
+    sql += "SELECT 'WEEK' GU, 'TSUM' SEASON, 'TSUM' YSCD, 99999 DISPNO, "
+    sql += "SQTY, SAMT, SW7QTY, SW6QTY, SW5QTY, SW4QTY, SW3QTY, SW2QTY, SW1QTY, "
+    sql += "'TSUM' JREFNM, 'TSUM' JYSCD, 'WEEK' JGU, "
+    sql += "0 JSQTY, 0 JSAMT, 0 JSW7QTY, 0 JSW6QTY, 0 JSW5QTY, 0 JSW4QTY, 0 JSW3QTY, 0 JSW2QTY, 0 JSW1QTY "
+    sql += "FROM "
+    sql += "(SELECT COMCD, SUCD, BRCD, "
+    sql += "CASE WHEN COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" THEN SUM(INQTY-CHINAQTY) ELSE SUM(INQTY) END SQTY, "
+    sql += "CASE WHEN COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" THEN SUM(INTAGPRI-CHINAPRI) ELSE SUM(SILAMT) END SAMT, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-48 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-42 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW7QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-41 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-35 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW6QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-34 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW5QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-27 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW4QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-20 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW3QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-13 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW2QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') AND '"+choiceDay+"' THEN SQTY ELSE 0 END) SW1QTY "
+    sql += "FROM BIWE010 "
+    sql += "WHERE COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" "
+    sql += "AND YSCD BETWEEN '"+seasonStart+"' AND '"+seasonEnd+"' "
+    sql += "AND INOUTDT <= '"+choiceDay+"' "
+    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIWE010) "
+    sql += "GROUP BY COMCD, SUCD, BRCD) WEEK "
+    sql += "UNION ALL "
+    sql += "SELECT 'ACC' GU, 'TSUM' SEASON, 'TSUM' YSCD, 99999 DISPNO, "
+    sql += "SALEQTY SQTY, SAMT, "
+    sql += "SQTY+SW7QTY SW7QTY, "
+    sql += "SQTY+SW7QTY+SW6QTY SW6QTY, "
+    sql += "SQTY+SW7QTY+SW6QTY+SW5QTY SW5QTY, "
+    sql += "SQTY+SW7QTY+SW6QTY+SW5QTY+SW4QTY SW4QTY, "
+    sql += "SQTY+SW7QTY+SW6QTY+SW5QTY+SW4QTY+SW3QTY SW3QTY, "
+    sql += "SQTY+SW7QTY+SW6QTY+SW5QTY+SW4QTY+SW3QTY+SW2QTY SW2QTY, "
+    sql += "SQTY+SW7QTY+SW6QTY+SW5QTY+SW4QTY+SW3QTY+SW2QTY+SW1QTY SW1QTY, "
+    sql += "'TSUM' JREFNM, 'TSUM' JYSCD, 'WEEK' JGU, "
+    sql += "0 JSQTY, 0 JSAMT, 0 JSW7QTY, 0 JSW6QTY, 0 JSW5QTY, 0 JSW4QTY, 0 JSW3QTY, 0 JSW2QTY, 0 JSW1QTY "
+    sql += "FROM "
+    sql += "(SELECT COMCD, SUCD, BRCD, "
+    sql += "SUM(SQTY) SALEQTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-49 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SQTY, "
+    sql += "SUM(STAGPRI) SAMT, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-48 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-42 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW7QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-41 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-35 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW6QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-34 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW5QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-27 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW4QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-20 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW3QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-13 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW2QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') AND '"+choiceDay+"' THEN SQTY ELSE 0 END) SW1QTY "
+    sql += "FROM BIWE010 "
+    sql += "WHERE COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" "
+    sql += "AND YSCD BETWEEN '"+seasonStart+"' AND '"+seasonEnd+"' "
+    sql += "AND INOUTDT <= '"+choiceDay+"' "
+    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIWE010) "
+    sql += "GROUP BY COMCD, SUCD, BRCD) ACCWEEK "
+    sql += "UNION ALL "
+    sql += "SELECT 'WEEK' GU, 'TSUM' SEASON, 'TSUM' YSCD, 99999 DISPNO, "
+    sql += "0 SQTY, 0 SAMT, 0 SW7QTY, 0 SW6QTY, 0 SW5QTY, 0 SW4QTY, 0 SW3QTY, 0 SW2QTY, 0 SW1QTY, "
+    sql += "'TSUM' JREFNM, 'TSUM' JYSCD, 'WEEK' JGU, "
+    sql += "SQTY, SAMT, JSW7QTY, JSW6QTY, JSW5QTY, JSW4QTY, JSW3QTY, JSW2QTY, JSW1QTY "
+    sql += "FROM "
+    sql += "(SELECT COMCD, SUCD, BRCD, "
+    sql += "CASE WHEN COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" THEN SUM(INQTY-CHINAQTY) ELSE SUM(INQTY) END SQTY, "
+    sql += "CASE WHEN COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" THEN SUM(INTAGPRI-CHINAPRI) ELSE SUM(SILAMT) END SAMT, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-34 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW7QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-27 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW6QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-20 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW5QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-13 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW4QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') AND '"+choiceBe1Day+"' THEN SQTY ELSE 0 END) JSW3QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/1 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW2QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/8 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW1QTY "
+    sql += "FROM BIWE010 "
+    sql += "WHERE COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" "
+    sql += "AND YSCD BETWEEN '"+lastseasonStart+"' AND '"+lastseasonEnd+"' "
+    // sql += "AND INOUTDT <= '"+choiceBe1Day+"' "
+    sql += "AND INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/14 0:0:0'),'YYYYMMDD') "
+    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIWE010) "
+    sql += "GROUP BY COMCD, SUCD, BRCD) JWEEK "
+    sql += "UNION ALL "
+    sql += "SELECT 'ACC' GU, 'TSUM' SEASON, 'TSUM' YSCD, 99999 DISPNO, "
+    sql += "0 SQTY, 0 SAMT, "
+    sql += "0 SW7QTY, 0 SW6QTY, 0 SW5QTY, 0 SW4QTY, 0 SW3QTY, 0 SW2QTY, 0 SW1QTY, "
+    sql += "'TSUM' JREFNM, 'TSUM' JYSCD, 'ACC' JGU, "
+    sql += "SALEQTY JSQTY, SAMT JSAMT, "
+    sql += "SQTY+JSW7QTY JSW7QTY, "
+    sql += "SQTY+JSW7QTY+JSW6QTY JSW6QTY, "
+    sql += "SQTY+JSW7QTY+JSW6QTY+JSW5QTY JSW5QTY, "
+    sql += "SQTY+JSW7QTY+JSW6QTY+JSW5QTY+JSW4QTY JSW4QTY, "
+    sql += "SQTY+JSW7QTY+JSW6QTY+JSW5QTY+JSW4QTY+JSW3QTY JSW3QTY, "
+    sql += "SQTY+JSW7QTY+JSW6QTY+JSW5QTY+JSW4QTY+JSW3QTY+JSW2QTY JSW2QTY, "
+    sql += "SQTY+JSW7QTY+JSW6QTY+JSW5QTY+JSW4QTY+JSW3QTY+JSW2QTY+JSW1QTY JSW1QTY "
+    sql += "FROM "
+    sql += "(SELECT COMCD, SUCD, BRCD, "
+    sql += "SUM(SQTY) SALEQTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-35 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SQTY, "
+    sql += "SUM(STAGPRI) SAMT, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-34 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW7QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-27 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW6QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-20 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW5QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-13 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW4QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') AND '"+choiceBe1Day+"' THEN SQTY ELSE 0 END) JSW3QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/1 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW2QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/8 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) JSW1QTY "
+    sql += "FROM BIWE010 "
+    sql += "WHERE COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" "
+    sql += "AND YSCD BETWEEN '"+lastseasonStart+"' AND '"+lastseasonEnd+"' "
+    // sql += "AND INOUTDT <= '"+choiceBe1Day+"' "
+    sql += "AND INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/14 0:0:0'),'YYYYMMDD') "
+    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIWE010) "
+    sql += "GROUP BY COMCD, SUCD, BRCD) JACCWEEK "
+    sql += ") T "
+    sql += "GROUP BY SEASON, YSCD, GU, JREFNM, JYSCD, JGU, DISPNO "
+    sql += ")TT "
+    sql += "GROUP BY SEASON, YSCD, JREFNM, DISPNO "
+    sql += "ORDER BY DISPNO, YSCD "
+    
+    axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
+}
+
+exports.getWeeklyGraph = (req, res) => {
+    console.log("============== getWeeklyGraph Call ======================");
+    let selectSucd = req.body.params.selectSucd
+    let selectComcd = 1
+    let brcd
+    
+    let seasonStartYear = req.body.params.seasonStartYear
+    let seasonStartMonth = req.body.params.seasonStartMonth
+    let seasonEndYear = req.body.params.seasonEndYear
+    let seasonEndMonth = req.body.params.seasonEndMonth
+
+    let seasonStart = seasonStartYear + seasonStartMonth
+    let seasonEnd = seasonEndYear + seasonEndMonth
+
+    let lastseasonStartYear = req.body.params.lastseasonStartYear
+    let lastseasonStartMonth = req.body.params.lastseasonStartMonth
+    let lastseasonEndYear = req.body.params.lastseasonEndYear
+    let lastseasonEndMonth = req.body.params.lastseasonEndMonth
+
+    let lastseasonStart = lastseasonStartYear + lastseasonStartMonth
+    let lastseasonEnd = lastseasonEndYear + lastseasonEndMonth
+
+    let choiceDay = req.body.params.choiceDay
+    let choiceBe1Day = req.body.params.choiceBe1Day
+
+    if(selectSucd == 3) { // SO 사업부만 selectComcd 2
+        selectComcd = 2
+    }
+
+    if(selectSucd == 1) { // MI사업부
+        brcd = "BRCD = 'MI'"
+    } else if(selectSucd == 12) { // MO사업부
+        brcd = "BRCD = 'MI'"
+    } else if(selectSucd == 4) { // IT사업부
+        brcd = "BRCD = 'IT'"
+    } else if(selectSucd == 3) { // SO사업부
+        brcd = "BRCD = 'SO'"
+    } else if(selectSucd == 21) { // FO사업부
+        brcd = "BRCD IN ('MI','IT','SO')"
+    }
+
+    /*
+    주간판매동향 - 그래프
+    2019.11.13 by hijin
+    VI_COMCD  -- 회사
+    VI_SUCD   -- 사업부
+    VI_BRCD   -- 브랜드
+    VI_DT     -- 기준일
+    VI_JDT    -- 기준일 1년전 같은 요일
+    VI_FYSCD  -- From시즌
+    VI_TYSCD  -- To시즌
+    VI_JFYSCD -- 전년도 From시즌
+    VI_JTYSCD  -- 전년도 To시즌
+
+    GU
+    TY = 당년주간
+    TYACC = 당년누적
+    LY = 전년주간
+    LYACC = 전년누적
+    */
+
+    let sql = ""
+    sql += "SELECT COMCD, SUCD, BRCD, 'TY' GU, 1 ORD, "
+    sql += "SW21QTY,SW20QTY,SW19QTY,SW18QTY,SW17QTY,SW16QTY,SW15QTY,SW14QTY,SW13QTY,SW12QTY, "
+    sql += "SW11QTY,SW10QTY,SW9QTY,SW8QTY,SW7QTY,SW6QTY,SW5QTY,SW4QTY,SW3QTY,SW2QTY,SW1QTY "
+    sql += "FROM ( "
+    sql += "SELECT COMCD, SUCD, BRCD, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-97 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-91 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW21QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-90 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-84 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW20QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-83 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-77 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW19QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-76 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-70 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW18QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-69 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-63 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW17QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-62 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-56 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW16QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-55 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-49 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW15QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-48 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-42 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW14QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-41 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-35 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW13QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-34 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW12QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-27 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW11QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-20 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW10QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-13 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW9QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') AND '"+choiceDay+"' THEN SQTY ELSE 0 END) SW8QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/1 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW7QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/8 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW6QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/15 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW5QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/22 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW4QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/29 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/35 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW3QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/36 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/42 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW2QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/43 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/49 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW1QTY "
+    sql += "FROM BIWE010 "
+    sql += "WHERE COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" "
+    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIWE010) "
+    sql += "AND YSCD BETWEEN '"+seasonStart+"' AND '"+seasonEnd+"' "
+    sql += "AND INOUTDT <= '"+choiceDay+"' "
+    sql += "GROUP BY COMCD, SUCD, BRCD "
+    sql += ") "
+    sql += "UNION ALL "
+    sql += "SELECT COMCD, SUCD, BRCD, 'TYACC' GU, 2 ORD, "
+    sql += "SW21QTY,SW20QTY,SW19QTY,SW18QTY,SW17QTY,SW16QTY,SW15QTY,SW14QTY,SW13QTY,SW12QTY, "
+    sql += "SW11QTY,SW10QTY,SW9QTY,SW8QTY,SW7QTY,SW6QTY,SW5QTY,SW4QTY,SW3QTY,SW2QTY,SW1QTY "
+    sql += "FROM ( "
+    sql += "SELECT COMCD, SUCD, BRCD, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-91 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW21QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-84 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW20QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-77 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW19QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-70 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW18QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-63 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW17QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-56 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW16QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-49 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW15QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-42 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW14QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-35 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW13QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW12QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW11QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW10QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/-7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW9QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= '"+choiceDay+"' THEN SQTY ELSE 0 END) SW8QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW7QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW6QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW5QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW4QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/35 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW3QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/42 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW2QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceDay+"', 'YYYYMMDD'), '0/0/49 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW1QTY "
+    sql += "FROM BIWE010 "
+    sql += "WHERE COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" "
+    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIWE010) "
+    sql += "AND YSCD BETWEEN '"+seasonStart+"' AND '"+seasonEnd+"' "
+    sql += "AND INOUTDT <= '"+choiceDay+"' "
+    sql += "GROUP BY COMCD, SUCD, BRCD "
+    sql += ") "
+    sql += "UNION ALL "
+    sql += "SELECT COMCD, SUCD, BRCD, 'LY' GU, 3 ORD, "
+    sql += "SW21QTY,SW20QTY,SW19QTY,SW18QTY,SW17QTY,SW16QTY,SW15QTY,SW14QTY,SW13QTY,SW12QTY, "
+    sql += "SW11QTY,SW10QTY,SW9QTY,SW8QTY,SW7QTY,SW6QTY,SW5QTY,SW4QTY,SW3QTY,SW2QTY,SW1QTY "
+    sql += "FROM ( "
+    sql += "SELECT COMCD, SUCD, BRCD, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-97 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-91 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW21QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-90 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-84 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW20QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-83 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-77 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW19QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-76 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-70 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW18QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-69 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-63 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW17QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-62 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-56 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW16QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-55 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-49 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW15QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-48 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-42 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW14QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-41 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-35 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW13QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-34 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW12QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-27 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW11QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-20 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW10QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-13 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW9QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') AND '"+choiceBe1Day+"' THEN SQTY ELSE 0 END) SW8QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/1 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW7QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/8 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW6QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/15 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW5QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/22 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW4QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/29 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/35 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW3QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/36 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/42 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW2QTY, "
+    sql += "SUM(CASE WHEN INOUTDT BETWEEN TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/43 0:0:0'),'YYYYMMDD') AND TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/49 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW1QTY "
+    sql += "FROM BIWE010 "
+    sql += "WHERE COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" "
+    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIWE010) "
+    sql += "AND YSCD BETWEEN '"+lastseasonStart+"' AND '"+lastseasonEnd+"' "
+    sql += "AND INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/49 0:0:0'),'YYYYMMDD') "
+    sql += "GROUP BY COMCD, SUCD, BRCD "
+    sql += ") "
+    sql += "UNION ALL "
+    sql += "SELECT COMCD, SUCD, BRCD, 'LYACC' GU, 4 ORD, "
+    sql += "SW21QTY,SW20QTY,SW19QTY,SW18QTY,SW17QTY,SW16QTY,SW15QTY,SW14QTY,SW13QTY,SW12QTY, "
+    sql += "SW11QTY,SW10QTY,SW9QTY,SW8QTY,SW7QTY,SW6QTY,SW5QTY,SW4QTY,SW3QTY,SW2QTY,SW1QTY "
+    sql += "FROM ( "
+    sql += "SELECT COMCD, SUCD, BRCD, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-91 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW21QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-84 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW20QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-77 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW19QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-70 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW18QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-63 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW17QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-56 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW16QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-49 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW15QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-42 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW14QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-35 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW13QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW12QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW11QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW10QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/-7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW9QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= '"+choiceBe1Day+"' THEN SQTY ELSE 0 END) SW8QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/7 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW7QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/14 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW6QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/21 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW5QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/28 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW4QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/35 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW3QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/42 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW2QTY, "
+    sql += "SUM(CASE WHEN INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/49 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) SW1QTY "
+    sql += "FROM BIWE010 "
+    sql += "WHERE COMCD = '"+selectComcd+"' AND SUCD = '"+selectSucd+"' AND "+brcd+" "
+    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIWE010) "
+    sql += "AND YSCD BETWEEN '"+lastseasonStart+"' AND '"+lastseasonEnd+"' "
+    sql += "AND INOUTDT <= TO_CHAR(ADD_TIME(TO_DATE('"+choiceBe1Day+"', 'YYYYMMDD'), '0/0/49 0:0:0'),'YYYYMMDD') "
+    sql += "GROUP BY COMCD, SUCD, BRCD "
+    sql += ") "
+    sql += "ORDER BY ORD"
+
+    axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
+}
