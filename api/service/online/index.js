@@ -706,3 +706,71 @@ exports.getITOnOffDetailData = (req, res) => {
     
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault));
 };
+
+// 마감 기준 매출 실적
+exports.getBaseSaleList = (req, res) => {
+    console.log("============== getBaseSaleList Call ======================");
+    //let year = parseInt(req.query.year);
+    
+    let sql = "SELECT BRCD, SORT,";
+    sql += "       CASE ";
+    sql += "         WHEN DAYTOT = 0 THEN 0 ELSE ROUND(DAYTOT/1000, 0) ";
+    sql += "       END DAYTOT, ";
+    sql += "       CASE WHEN DAYJASA = 0 THEN 0 ELSE ROUND(DAYJASA/1000, 0) END DAYJASA, ";
+    sql += "       CASE ";
+    sql += "         WHEN DAYOUT = 0 THEN 0 ELSE ROUND(DAYOUT/1000, 0) ";
+    sql += "       END DAYOUT, ";
+    sql += "       CASE ";
+    sql += "         WHEN (DAYJASA+DAYOUT) = 0 THEN 0 ELSE ROUND((DAYJASA+DAYOUT)/DAYTOT, 2)*100 ";
+    sql += "       END DAYRAT, ";
+    sql += "       CASE ";
+    sql += "         WHEN MONTOT = 0 THEN 0 ELSE ROUND(MONTOT/1000, 0) ";
+    sql += "       END MONTOT, ";
+    sql += "       CASE ";
+    sql += "         WHEN MONJASA = 0 THEN 0 ELSE ROUND(MONJASA/1000, 0) ";
+    sql += "       END MONJASA, ";
+    sql += "       CASE ";
+    sql += "         WHEN MONOUT = 0 THEN 0 ELSE ROUND(MONOUT/1000, 0) ";
+    sql += "       END MONOUT, ";
+    sql += "       CASE ";
+    sql += "         WHEN (MONJASA+MONOUT) = 0 THEN 0 ELSE ROUND((MONJASA+MONOUT)/MONTOT, 2)*100 ";
+    sql += "       END MONRAT ";
+    sql += "FROM   (SELECT BRCD, SORT, ";
+    sql += "               SUM(DAYTOT) AS DAYTOT, SUM(DAYJASA) AS DAYJASA, ";
+    sql += "               SUM(DAYOUT) AS DAYOUT, SUM(MONTOT) AS MONTOT, ";
+    sql += "               SUM(MONJASA) AS MONJASA, SUM(MONOUT) AS MONOUT ";
+    sql += "        FROM   (SELECT BRCD, SILAMT AS DAYTOT, ";
+    sql += "                       CASE ";
+    sql += "                         WHEN VDCD IN ('MI615', 'MID85', 'IT519', 'IT520', 'IN804', 'SO885') ";
+    sql += "                         THEN SILAMT ELSE 0 ";
+    sql += "                       END DAYJASA, ";
+    sql += "                       CASE ";
+    sql += "                         WHEN VDCD IN ('IT515', 'IT518', 'IT524') ";
+    sql += "                         THEN SILAMT WHEN SUCD = '23' AND VDCD <> 'IN804' THEN SILAMT ELSE 0 ";
+    sql += "                       END DAYOUT, ";
+    sql += "                       0 AS MONTOT, 0 AS MONJASA, 0 AS MONOUT,";
+    sql += "                       DECODE(BRCD, 'MI', '1', 'MO', '2', 'IT', '3', 'IN', '4', 'SO', '5') AS SORT ";
+    sql += "                FROM   BION060 ";
+    sql += "                WHERE  SALEDT = TO_CHAR(ADD_TIME(SYSDATE, '0/0/-1 0:0:0'), 'YYYYMMDD') ";
+    sql += "                AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM BION060) ";
+    sql += "                UNION ALL ";
+    sql += "                SELECT BRCD, 0 AS DAYTOT, 0 AS DAYJASAS, 0 AS DAYOUT, SILAMT AS MONTOT, ";
+    sql += "                       CASE ";
+    sql += "                         WHEN VDCD IN ('MI615', 'MID85', 'IT519', 'IT520', 'IN804', 'SO885') ";
+    sql += "                         THEN SILAMT ELSE 0 ";
+    sql += "                       END MONJASA, ";
+    sql += "                       CASE ";
+    sql += "                         WHEN VDCD IN ('IT515', 'IT518', 'IT524') THEN SILAMT ";
+    sql += "                         WHEN SUCD = '23' AND VDCD <> 'IN804' THEN SILAMT ELSE 0 ";
+    sql += "                       END MONOUT, ";
+    sql += "                       DECODE(BRCD, 'MI', '1', 'MO', '2', 'IT', '3', 'IN', '4', 'SO', '5') AS SORT ";
+    sql += "                FROM   BION060 ";
+    sql += "                WHERE  SUBSTR(SALEDT, 1, 6) = TO_CHAR(SYSDATE, 'YYYYMM') ";
+    sql += "                AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM BION060)) ";
+    sql += "        WHERE  BRCD <> 'SO' ";
+    sql += "        GROUP BY BRCD, SORT ";
+    sql += "        ORDER BY SORT) ";
+    //console.log(sql);
+    
+    axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault));
+};
