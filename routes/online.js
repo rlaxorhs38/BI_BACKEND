@@ -19,6 +19,8 @@ router.get('/getMallDetailData', service.getMallDetailData);
 router.get('/getSaleByBrandList', service.getSaleByBrandList);
 router.get('/getITOnOffSaleList', service.getITOnOffSaleList);
 router.get('/getBaseSaleList', service.getBaseSaleList);
+router.get('/getDailySaleList', service.getDailySaleList);
+router.get('/getMonthlySaleList', service.getMonthlySaleList);
 
 /* ONL0104 */
 router.get('/getSaleByBrdDetailData', service.getSaleByBrdDetailData);
