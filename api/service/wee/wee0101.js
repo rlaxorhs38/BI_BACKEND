@@ -7,7 +7,9 @@ exports.getDataByClothingType = (req, res) => {
     
     let selectSucd = req.query.selectSucd;
     let date = req.query.date;
+    let startDate  = req.query.startDate;
     let lastYearDate = req.query.lastYearDate;
+    let startYearDate = req.query.startYearDate;
     let fromSeason = req.query.fromSeason;
     let toSeason = req.query.toSeason;
     let fromLastYearSeason = req.query.fromLastYearSeason;
@@ -30,7 +32,6 @@ exports.getDataByClothingType = (req, res) => {
     } else if(selectSucd == 21) { // FO사업부
         brcd = "BRCD IN ('MI','IT','SO')"
     }
-    
     // 지역 셀렉박스
     let sql = ""        
     sql += "SELECT ITEM, CODNM, MCNT, INQTY, INAMT, SOINAMT, SQTY, SILAMT, ACCSQTY, ACCSILAMT,"
@@ -69,8 +70,8 @@ exports.getDataByClothingType = (req, res) => {
     sql += "                   CASE WHEN STYCD = MAINSTYCD AND SUBSTR(STYCD, 8, 1) <> '8' THEN 1 ELSE 0 END AS MCNT,"
     sql += "                   SUM(INQTY) AS INQTY,"
     sql += "                   SUM(INTAGPRI)/1000 AS INTAGPRI,"
-    sql += "                   SUM(CASE WHEN INOUTDT >= TO_CHAR(ADD_TIME(TO_DATE('" + date + "', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) AS SQTY,"
-    sql += "                   SUM(CASE WHEN INOUTDT >= TO_CHAR(ADD_TIME(TO_DATE('" + date + "', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') THEN SILAMT ELSE 0 END)/1000 AS SILAMT,"
+    sql += "                   SUM(CASE WHEN INOUTDT >= '"+startDate+"' THEN SQTY ELSE 0 END) AS SQTY,"
+    sql += "                   SUM(CASE WHEN INOUTDT >= '"+startDate+"' THEN SILAMT ELSE 0 END)/1000 AS SILAMT,"
     sql += "                   SUM(SQTY) AS ACCSQTY,"
     sql += "                   SUM(SILAMT)/1000 AS ACCSILAMT,"
     sql += "                   SUM(CHINAQTY) AS CHINAQTY,"
@@ -102,8 +103,8 @@ exports.getDataByClothingType = (req, res) => {
     sql += "                   CASE WHEN STYCD = MAINSTYCD AND SUBSTR(STYCD, 8, 1) <> '8' THEN 1 ELSE 0 END AS MCNT,"
     sql += "                   SUM(INQTY) AS INQTY,"
     sql += "                   SUM(INTAGPRI)/1000 AS INTAGPRI,"
-    sql += "                   SUM(CASE WHEN INOUTDT >= TO_CHAR(ADD_TIME(TO_DATE('" + lastYearDate + "', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) AS SQTY,"
-    sql += "                   SUM(CASE WHEN INOUTDT >= TO_CHAR(ADD_TIME(TO_DATE('" + lastYearDate + "', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') THEN SILAMT ELSE 0 END)/1000 AS SILAMT,"
+    sql += "                   SUM(CASE WHEN INOUTDT >= '"+startYearDate+"' THEN SQTY ELSE 0 END) AS SQTY,"
+    sql += "                   SUM(CASE WHEN INOUTDT >= '"+startYearDate+"' THEN SILAMT ELSE 0 END)/1000 AS SILAMT,"
     sql += "                   SUM(SQTY) AS ACCSQTY,"
     sql += "                   SUM(SILAMT)/1000 AS ACCSILAMT,"
     sql += "                   SUM(CHINAQTY) AS CHINAQTY,"
@@ -145,8 +146,8 @@ exports.getDataByClothingType = (req, res) => {
     sql += "                   CASE WHEN STYCD = MAINSTYCD AND SUBSTR(STYCD, 8, 1) <> '8' THEN 1 ELSE 0 END AS MCNT,"
     sql += "                   SUM(INQTY) AS INQTY,"
     sql += "                   SUM(INTAGPRI)/1000 AS INTAGPRI,"
-    sql += "                   SUM(CASE WHEN INOUTDT >= TO_CHAR(ADD_TIME(TO_DATE('" + date + "', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) AS SQTY,"
-    sql += "                   SUM(CASE WHEN INOUTDT >= TO_CHAR(ADD_TIME(TO_DATE('" + date + "', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') THEN SILAMT ELSE 0 END)/1000 AS SILAMT,"
+    sql += "                   SUM(CASE WHEN INOUTDT >= '"+startDate+"' THEN SQTY ELSE 0 END) AS SQTY,"
+    sql += "                   SUM(CASE WHEN INOUTDT >= '"+startDate+"' THEN SILAMT ELSE 0 END)/1000 AS SILAMT,"
     sql += "                   SUM(SQTY) AS ACCSQTY,"
     sql += "                   SUM(SILAMT)/1000 AS ACCSILAMT,"
     sql += "                   SUM(CHINAQTY) AS CHINAQTY,"
@@ -179,8 +180,8 @@ exports.getDataByClothingType = (req, res) => {
     sql += "                   CASE WHEN STYCD = MAINSTYCD AND SUBSTR(STYCD, 8, 1) <> '8' THEN 1 ELSE 0 END AS MCNT,"
     sql += "                   SUM(INQTY) AS INQTY,"
     sql += "                   SUM(INTAGPRI)/1000 AS INTAGPRI,"
-    sql += "                   SUM(CASE WHEN INOUTDT >= TO_CHAR(ADD_TIME(TO_DATE('" + lastYearDate + "', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') THEN SQTY ELSE 0 END) AS SQTY,"
-    sql += "                   SUM(CASE WHEN INOUTDT >= TO_CHAR(ADD_TIME(TO_DATE('" + lastYearDate + "', 'YYYYMMDD'), '0/0/-6 0:0:0'),'YYYYMMDD') THEN SILAMT ELSE 0 END)/1000 AS SILAMT,"
+    sql += "                   SUM(CASE WHEN INOUTDT >= '"+startYearDate+"' THEN SQTY ELSE 0 END) AS SQTY,"
+    sql += "                   SUM(CASE WHEN INOUTDT >= '"+startYearDate+"' THEN SILAMT ELSE 0 END)/1000 AS SILAMT,"
     sql += "                   SUM(SQTY) AS ACCSQTY,"
     sql += "                   SUM(SILAMT)/1000 AS ACCSILAMT,"
     sql += "                   SUM(CHINAQTY) AS CHINAQTY,"
@@ -201,7 +202,7 @@ exports.getDataByClothingType = (req, res) => {
     sql += "     GROUP BY A.ITEM, CODNM, A.SORTORD"
     sql += "    )"
     sql += " ORDER BY SORTORD"
-    
+
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault));
 };
 
@@ -559,7 +560,6 @@ exports.getForeignerSumData = (req, res) => {
     sql += "            GROUP BY COMCD, SUCD, BRCD, SALEGU, INOUTDT"
     sql += "        )"
     sql += "       )"
-
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault));
 };
 
