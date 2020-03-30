@@ -2,6 +2,7 @@ var express = require('express');
 const service = require('../api/service/fin')
 const fin0001 = require('../api/service/fin/fin0001')
 const fin0101 = require('../api/service/fin/fin0101')
+const fin0102 = require('../api/service/fin/fin0102')
 const fin0201 = require('../api/service/fin/fin0201')
 const fin0202 = require('../api/service/fin/fin0202')
 const fin0301 = require('../api/service/fin/fin0301')
@@ -40,6 +41,10 @@ router.get('/getCurrentYearData', fin0101.getCurrentYearData);
 router.get('/getStoreList', fin0101.getStoreList);
 router.get('/getSalesChartCount', fin0101.getSalesChartCount);
 router.get('/getSalesChartAMT', fin0101.getSalesChartAMT);
+router.get('/getCumulativeSales', fin0101.getCumulativeSales);
+
+/* FIN0102 */
+router.get('/getsalesRanking', fin0102.getsalesRanking);
 
 /* FIN0201 */
 router.get('/getSaleData2', fin0201.getSaleData);
