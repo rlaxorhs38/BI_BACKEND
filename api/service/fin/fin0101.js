@@ -59,41 +59,70 @@ exports.getCumulativeData = (req, res) => {
     console.log("============== getCumulativeData Call ======================");
 
     let tabType = req.query.tabType;
-    // let date = req.query.date;
+    let date = req.query.date;
     let authCodeList = req.query.authCodeList.split(',');
-    // let monthStartDate = req.query.monthStartDate;
+    let monthStartDate = req.query.monthStartDate;
 
     // 당일 매출, 당일 매출 목표, 월 누적매출, 월 매출 목표,
-    let sql = "SELECT SUNM, " + tabType + " MCODE, SUM(SALE_TOT) AS SALE_YEAR_TOT, SUM(AMT) YEAR_AMT, SUM(SALE_MONTH_TOT) AS SALE_MONTH_TOT, SUM(MONTH_AMT) AS MONTH_AMT FROM ( ";
-    sql += "SELECT SUNM, " + tabType + ", SALE_TOT, AMT, 0 AS SALE_MONTH_TOT, 0 AS MONTH_AMT FROM ( ";
-    sql += "SELECT SUNM, " + tabType + ", SUM((JAMT+DCAMT+GAMT+ADVDEPAMT))AS SALE_TOT, SUM(TARGETAMT) AMT FROM BISL061 ";
-    sql += "WHERE " + tabType + " IN ("
+    let sql = "SELECT SUNM, " + tabType + " MCODE, ";
+    sql += "       SUM(SALE_YEAR_TOT) AS SALE_YEAR_TOT, SUM(YEAR_AMT) AS YEAR_AMT,  ";
+    sql += "       SUM(SALE_MONTH_TOT) AS SALE_MONTH_TOT, SUM(MONTH_AMT) AS MONTH_AMT, ";
+    sql += "       SUM(SALE_TOT) AS SALE_TOT, SUM(AMT) AS AMT ";
+    sql += "FROM   ( ";
+    sql += "        SELECT SUNM, " + tabType + ", SALE_TOT AS SALE_YEAR_TOT, AMT AS YEAR_AMT, ";
+    sql += "               0 AS SALE_MONTH_TOT, 0 AS MONTH_AMT, 0 AS SALE_TOT, 0 AS AMT ";
+    sql += "        FROM   ( SELECT SUNM, " + tabType + ", ";
+    sql += "                 SUM((JAMT+DCAMT+GAMT+ADVDEPAMT))AS SALE_TOT, SUM(TARGETAMT) AMT FROM BISL061 ";
+    sql += "        WHERE " + tabType + " IN ("
         for (i=0;i<authCodeList.length;i++) {
             sql += "'" + authCodeList[i] + "'"
             if (i < authCodeList.length - 1) {
             sql += ","
             }
         }
-    sql += ") ";
-    sql += "AND    SALEDT BETWEEN SUBSTR(TO_CHAR(SYSDATE,'YYYYMMDD'),1,4)||'0101' AND TO_CHAR(ADD_TIME(SYSDATE, '0/0/-1 0:0:0'),'YYYYMMDD') ";
-    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
-    sql += "GROUP BY SUNM, " + tabType + ") ";
-    sql += "UNION ALL ";
-    sql += "SELECT SUNM, " + tabType + ", 0 AS SALE_TOT, 0 AS AMT, SALE_MONTH_TOT, TARGETAMT AS MONTH_AMT FROM ( ";
-    sql += "SELECT SUNM, " + tabType + ", SUM((JAMT+DCAMT+GAMT+ADVDEPAMT))AS SALE_MONTH_TOT, SUM(TARGETAMT) TARGETAMT FROM BISL061 ";
-    sql += "WHERE " + tabType + " IN ("
+    sql += "        ) ";
+    sql += "        AND SALEDT BETWEEN '" + monthStartDate + "' AND '" + date + "' ";
+    sql += "        AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
+    sql += "        GROUP BY SUNM, " + tabType + ") ";
+    sql += "        UNION ALL ";
+    sql += "        SELECT SUNM, " + tabType + ", ";
+    sql += "               0 AS SALE_YEAR_TOT, 0 AS YEAR_AMT, ";
+    sql += "               SALE_MONTH_TOT, TARGETAMT AS MONTH_AMT, ";
+    sql += "               0 AS SALE_TOT, 0 AS AMT ";
+    sql += "        FROM   ( SELECT SUNM, " + tabType + ", ";
+    sql += "                SUM((JAMT+DCAMT+GAMT+ADVDEPAMT)) AS SALE_MONTH_TOT, SUM(TARGETAMT) TARGETAMT FROM BISL061 ";
+    sql += "        WHERE " + tabType + " IN ("
         for (i=0;i<authCodeList.length;i++) {
             sql += "'" + authCodeList[i] + "'"
             if (i < authCodeList.length - 1) {
                 sql += ","
             }
         }
-    sql += ") ";
-    sql += "AND SALEDT BETWEEN SUBSTR(TO_CHAR(SYSDATE,'YYYYMMDD'),1,6)||'01' AND TO_CHAR(ADD_TIME(SYSDATE, '0/0/-1 0:0:0'),'YYYYMMDD') ";
-    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
-    sql += "GROUP BY SUNM, " + tabType + ") ";
-    sql += ")GROUP BY SUNM, " + tabType + "";
+    sql += "        ) ";
+    sql += "        AND SALEDT BETWEEN TO_CHAR(ADD_TIME(SYSDATE, '0/0/-1 0:0:0'),'YYYYMM')||'01' AND TO_CHAR(ADD_TIME(SYSDATE, '0/0/-1 0:0:0'),'YYYYMMDD') ";
+    sql += "        AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
+    sql += "        GROUP BY SUNM, " + tabType + ") ";
+    sql += "        UNION ALL ";
+    sql += "        SELECT SUNM, " + tabType + ", ";
+    sql += "               0 AS SALE_YEAR_TOT, 0 AS YEAR_AMT, ";
+    sql += "               0 AS SALE_MONTH_TOT, 0 AS MONTH_AMT, ";
+    sql += "               SALE_TOT, AMT ";
+    sql += "        FROM   ( SELECT SUNM, " + tabType + ", ";
+    sql += "                SUM((JAMT+DCAMT+GAMT+ADVDEPAMT))AS SALE_TOT, SUM(TARGETAMT) AMT FROM BISL061 ";
+    sql += "        WHERE " + tabType + " IN ("
+        for (i=0;i<authCodeList.length;i++) {
+            sql += "'" + authCodeList[i] + "'"
+            if (i < authCodeList.length - 1) {
+                sql += ","
+            }
+        }
+    sql += "        ) ";
+    sql += "        AND SALEDT = '" + date + "' ";
+    sql += "        AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
+    sql += "        GROUP BY SUNM, " + tabType + ") ";
+    sql += ") GROUP BY SUNM, " + tabType + "";
 
+    console.log("getCumulativeData >>>??? "+sql);
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
 };
 
@@ -275,7 +304,7 @@ exports.getCumulativeSales = (req, res) => {
     sql += "            0 AS PRE_MONTH_TOT, ";
     sql += "            SUM(TARGETAMT) AS TARGETAMT ";
     sql += "        FROM   BISL061 ";
-    sql += "        WHERE  SALEDT BETWEEN SUBSTR(TO_CHAR(SYSDATE, 'YYYYMMDD'), 1, 4)||'0101' AND TO_CHAR(ADD_TIME(SYSDATE, '0/0/-1 0:0:0'), 'YYYY')||'1231' ";
+    sql += "        WHERE  SALEDT BETWEEN TO_CHAR(ADD_TIME(SYSDATE, '0/0/-1 0:0:0'), 'YYYY')||'0101' AND TO_CHAR(ADD_TIME(SYSDATE, '0/0/-1 0:0:0'), 'YYYY')||'1231' ";
     if(code != "A") {
         sql += "    AND " + tabType + " = '" + code + "' ";
     }
