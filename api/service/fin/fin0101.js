@@ -188,6 +188,8 @@ exports.getCurrentYearData = (req, res) => {
     sql += "WHERE SALEDT BETWEEN '" + start_date + "' AND '" + date + "' "
     if(code != "A") {
         sql += "AND " + tabType + " = '" + code + "' "
+    } else {
+        sql += "AND " + tabType + " IN ('1', '12', '4', '3', '21') "
     }
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
     sql += "GROUP BY SALEDT "
