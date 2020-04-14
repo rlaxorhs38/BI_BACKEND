@@ -478,7 +478,7 @@ exports.getStyleTopData = (req, res) => {
         sql += "WHERE SQTY > 0"
       }
     }
-
+    console.log("!!!sql >>> " + sql)
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
 };
 

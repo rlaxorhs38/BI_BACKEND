@@ -501,7 +501,7 @@ exports.getSaleByBrandList = (req, res) => {
     sql += "     WHEN MAINGU = 'IT' THEN SAMT ";
     sql += "     WHEN MAINGU = 'IN' THEN SAMT ";
     sql += "ELSE 0 END TOTSILAMT, ";
-    sql += "DECODE(MAINGU,'MI',1,'MO',2,'IT',3,'IN',4,'SO',5) SORT ";
+    sql += "DECODE(MAINGU,'MI',1,'MO',4,'IT',2,'IN',5,'SO',3) SORT ";
     sql += "FROM BION050 ";
     sql += "WHERE SALEDT BETWEEN '" + year + "0101' AND TO_CHAR(SYSDATE, 'YYYYMMDD') ";
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BION050) ";
@@ -632,7 +632,7 @@ exports.getSaleByBrdDetailData = (req, res) => {
     sql += "                                THEN SILAMT WHEN SUCD = '23'  ";
     sql += "                                            THEN SILAMT ELSE 0 ";
     sql += "                            END TOTSILAMT , ";
-    sql += "                            DECODE(BRCD, 'MI', 1, 'MO', 2, 'IT', 3, 'IN', 4, 'SO', 5) SORT ";
+    sql += "                            DECODE(BRCD, 'MI', 1, 'MO', 4, 'IT', 2, 'IN', 5, 'SO', 3) SORT ";
     sql += "                        FROM   BION060 ";
     sql += "                        WHERE SALEDT BETWEEN SUBSTR(TO_CHAR(SYSDATE,'YYYYMMDD'),1,4)||'0101' AND TO_CHAR(ADD_TIME(SYSDATE, '0/0/-1 0:0:0'),'YYYYMMDD') ";
     sql += "                        AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM BION060) ) ";
@@ -710,7 +710,7 @@ exports.getITOnOffDetailData = (req, res) => {
 // 매출 실적
 exports.getBaseSaleList = (req, res) => {
     console.log("============== getBaseSaleList Call ======================");
-    //let year = parseInt(req.query.year);
+    let selectDate = parseInt(req.query.selectDate);
     
     let sql = "SELECT BRCD, SORT,";
     sql += "       CASE ";
@@ -763,9 +763,9 @@ exports.getBaseSaleList = (req, res) => {
     sql += "                       END DAYOUT, ";
     sql += "                       0 AS MONTOT, 0 AS MONJASA, 0 AS MONOUT, ";
     sql += "                       0 AS YEARTOT , 0 AS YEARJASA , 0 AS YEAROUT , ";
-    sql += "                       DECODE(BRCD, 'MI', '1', 'MO', '2', 'IT', '3', 'IN', '4', 'SO', '5') AS SORT ";
+    sql += "                       DECODE(BRCD, 'MI', '1', 'MO', '4', 'IT', '2', 'IN', '5', 'SO', '3') AS SORT ";
     sql += "                FROM   BION060 ";
-    sql += "                WHERE  SALEDT = TO_CHAR(ADD_TIME(SYSDATE, '0/0/-1 0:0:0'), 'YYYYMMDD') ";
+    sql += "                WHERE  SALEDT = '"+selectDate+"'";
     sql += "                AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM BION060) ";
     sql += "                UNION ALL ";
     sql += "                SELECT BRCD, 0 AS DAYTOT, 0 AS DAYJASAS, 0 AS DAYOUT, SILAMT AS MONTOT, ";
@@ -778,7 +778,7 @@ exports.getBaseSaleList = (req, res) => {
     sql += "                         WHEN SUCD = '23' AND VDCD <> 'IN804' THEN SILAMT ELSE 0 ";
     sql += "                       END MONOUT, ";
     sql += "                       0 AS YEARTOT , 0 AS YEARJASA , 0 AS YEAROUT , ";
-    sql += "                       DECODE(BRCD, 'MI', '1', 'MO', '2', 'IT', '3', 'IN', '4', 'SO', '5') AS SORT ";
+    sql += "                       DECODE(BRCD, 'MI', '1', 'MO', '4', 'IT', '2', 'IN', '5', 'SO', '3') AS SORT ";
     sql += "                FROM   BION060 ";
     sql += "                WHERE SALEDT BETWEEN SUBSTR(TO_CHAR(SYSDATE,'YYYYMMDD'),1,6)||'01' AND TO_CHAR(ADD_TIME(SYSDATE, '0/0/-1 0:0:0'),'YYYYMMDD') ";
     sql += "                AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM BION060) ";
@@ -795,14 +795,14 @@ exports.getBaseSaleList = (req, res) => {
     sql += "                         THEN SILAMT WHEN SUCD = '23' AND VDCD <> 'IN804' ";
     sql += "                                     THEN SILAMT ELSE 0 ";
     sql += "                       END YEAROUT , ";
-    sql += "                       DECODE(BRCD, 'MI', '1', 'MO', '2', 'IT', '3', 'IN', '4', 'SO', '5') AS SORT ";
+    sql += "                       DECODE(BRCD, 'MI', '1', 'MO', '4', 'IT', '2', 'IN', '5', 'SO', '3') AS SORT ";
     sql += "                FROM   BION060 ";
     sql += "                WHERE SALEDT BETWEEN SUBSTR(TO_CHAR(SYSDATE,'YYYYMMDD'),1,4)||'0101' AND TO_CHAR(ADD_TIME(SYSDATE, '0/0/-1 0:0:0'),'YYYYMMDD') ";
     sql += "                AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM BION060)) ";
     sql += "        WHERE  BRCD <> 'SO' ";
     sql += "        GROUP BY BRCD, SORT ";
     sql += "        ORDER BY SORT) ";
-    //console.log(sql);
+    console.log("getBaseSaleList >>> " + sql);
     
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault));
 };
@@ -838,7 +838,7 @@ exports.getDailySaleList = (req, res) => {
     sql += "GROUP BY SALEDT ";
     sql += "ORDER BY SALEDT ";
   
-    //console.log(sql);
+    console.log("getDailySaleList >>> " + sql);
     
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault));
 };

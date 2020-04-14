@@ -100,7 +100,7 @@ exports.getAssignedBrandList = (req, res, next) => {
 
 exports.getFDRList = (req, res, next) => {
     console.log("============== getFDRList Call ======================");
-
+    
     // 데일리리포트(사업부 기준)
     let sql = "";
     sql += "SELECT A.GBNCD, A.MCODE, B.CODNM, B.SORTORD FROM ";
@@ -115,7 +115,8 @@ exports.getFDRList = (req, res, next) => {
     sql += "ORDER BY SORTORD) B ";
     sql += "WHERE A.MCODE = B.CODE ";
     sql += "ORDER BY B.SORTORD ";
-
+    console.log("getFDRList Call  >>> ", sql);
+    
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
 };
 
