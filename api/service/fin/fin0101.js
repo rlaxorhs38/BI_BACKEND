@@ -235,9 +235,13 @@ exports.getSalesChartCount = (req, res) => {
     let date = req.query.date;
 
     let start_date = "";
+    let sql = "";
 
     // 당일 판매, 반품 수량
-    let sql = "SELECT "
+    if(searchType == "2") {
+        sql += "SELECT SALEDT, SUM(JQTY) JQTY, SUM(DCQTY) DCQTY, SUM(GQTY) GQTY, SUM(R_JQTY) R_JQTY, SUM(R_DCQTY) R_DCQTY, SUM(R_GQTY) R_GQTY FROM ( "
+    }
+    sql += "SELECT "
     if(searchType == "1") {
         start_date = date;
         sql += " SALEDT, "
@@ -255,6 +259,12 @@ exports.getSalesChartCount = (req, res) => {
     }
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
     sql += "GROUP BY SALEDT "
+    if(searchType == "2") {
+        sql += ") GROUP BY SALEDT"
+    }
+
+    console.log("searchType >>> " + searchType + " || start_date >>> " + start_date)
+    console.log("getSalesChartCount >>> " + sql)
 
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
 };
@@ -265,15 +275,39 @@ exports.getSalesChartAMT = (req, res) => {
     let tabType = req.query.tabType;
     let code = req.query.code;
     let date = req.query.date;
+    let searchType = req.query.searchType.toString();
+
+    let start_date = "";
+    let sql = "";
 
     // 당일 판매, 반품 금액
-    let sql ="SELECT SALEDT, SUM(JSAMT) JAMT, SUM(DCSAMT) DCAMT, SUM(GSAMT) GAMT, SUM(JRAMT) R_JAMT, SUM(DCRAMT) R_DCAMT, SUM(GRAMT) R_GAMT, SUM(ADVDEPAMT) ADVDEPAMT FROM BISL061 "
-    sql += "WHERE SALEDT = '"+ date +"' "
+    if(searchType == "2") {
+        sql += "SELECT SALEDT, SUM(JAMT) JAMT, SUM(DCAMT) DCAMT, SUM(GAMT) GAMT, SUM(R_JAMT) R_JAMT, SUM(R_DCAMT) R_DCAMT, SUM(R_GAMT) R_GAMT, SUM(ADVDEPAMT) ADVDEPAMT FROM ( "
+    }
+    sql += "SELECT "
+    if(searchType == "1") {
+        start_date = date;
+        sql += " SALEDT, "
+    } else if(searchType == "2") {
+        start_date = date.substr(0, 6)+'01';
+        sql += " TO_CHAR(TO_DATE(SALEDT, 'YYYYMMDD'), 'YYYYMM') SALEDT, "
+    } else {
+        start_date = date.substr(0, 4)+'0101';
+        sql += " TO_CHAR(TO_DATE(SALEDT, 'YYYYMMDD'), 'YYYY') SALEDT, "
+    }
+    sql += " SUM(JSAMT) JAMT, SUM(DCSAMT) DCAMT, SUM(GSAMT) GAMT, SUM(JRAMT) R_JAMT, SUM(DCRAMT) R_DCAMT, SUM(GRAMT) R_GAMT, SUM(ADVDEPAMT) ADVDEPAMT FROM BISL061 "
+    sql += "WHERE SALEDT BETWEEN '"+ start_date +"' AND '"+ date +"' "
     if(code != "A") {
         sql += "AND " + tabType + " = '" + code + "' "
     }
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
     sql += "GROUP BY SALEDT "
+    if(searchType == "2") {
+        sql += ") GROUP BY SALEDT"
+    }
+
+    console.log(" || date >>> " + date)
+    console.log("getSalesChartAMT >>> " + sql)
 
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
 };

@@ -43,6 +43,8 @@ exports.getDailySalesData = (req, res) => {
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
     sql += "GROUP BY SUNM, " + tabType + ", AMT";
 
+    console.log("getDailySalesData Call >>>>> " + sql);
+
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
 };
 
