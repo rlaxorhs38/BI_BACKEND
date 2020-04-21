@@ -39,12 +39,17 @@ router.get('/getCumulativeData', fin0101.getCumulativeData);
 router.get('/getChartData2', fin0101.getChartData2);
 router.get('/getCurrentYearData', fin0101.getCurrentYearData);
 router.get('/getStoreList', fin0101.getStoreList);
+router.get('/getStoreMonthList', fin0101.getStoreMonthList);
 router.get('/getSalesChartCount', fin0101.getSalesChartCount);
 router.get('/getSalesChartAMT', fin0101.getSalesChartAMT);
 router.get('/getCumulativeSales', fin0101.getCumulativeSales);
 
 /* FIN0102 */
 router.get('/getsalesRanking', fin0102.getsalesRanking);
+
+/* FIN0103 */
+router.get('/getPerformanceList', fin0102.getPerformanceList);
+router.get('/getMonthGoal', fin0102.getMonthGoal);
 
 /* FIN0201 */
 router.get('/getSaleData2', fin0201.getSaleData);
