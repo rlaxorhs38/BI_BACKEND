@@ -1,4 +1,5 @@
 var axios = require('axios');
+var moment = require('moment');
 const db = require('../../config/db')
 
 exports.getMakeDataDate = (req, res, next) => {
@@ -815,11 +816,13 @@ exports.getDailySaleList = (req, res) => {
     console.log("!! DailyDate >> "+ start_date+" / "+ end_date)
 
     let sql = "SELECT TO_CHAR(TO_DATE(SALEDT, 'YYYYMMDD'), 'MM/DD') SALEDT, ";
+    sql += "        ROUND(NVL(SUM(TOTSILAMT), 0)/1000, 0) AS TOTSILAMT , ";    
     sql += "        ROUND(NVL(SUM(MISILAMT), 0)/1000, 0) AS MISILAMT , ";
     sql += "        ROUND(NVL(SUM(MOSILAMT), 0)/1000, 0) AS MOSILAMT , ";
     sql += "        ROUND(NVL(SUM(ITSILAMT), 0)/1000, 0) AS ITSILAMT , ";
     sql += "        ROUND(NVL(SUM(INSILAMT), 0)/1000, 0) AS INSILAMT ";
     sql += "FROM   (SELECT SALEDT , ";
+    sql += "            SILAMT TOTSILAMT, "; 
     sql += "            DECODE(BRCD, 'MI', SILAMT) MISILAMT , ";
     sql += "            DECODE(BRCD, 'MO', SILAMT) MOSILAMT , ";
     sql += "            DECODE(BRCD, 'IT', SILAMT) ITSILAMT , ";
@@ -838,7 +841,7 @@ exports.getDailySaleList = (req, res) => {
     sql += "GROUP BY SALEDT ";
     sql += "ORDER BY SALEDT ";
   
-    console.log("getDailySaleList >>> " + sql);
+    console.log("getDailySaleList ===========> " + sql);
     
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault));
 };
@@ -851,11 +854,13 @@ exports.getMonthlySaleList = (req, res) => {
     console.log("!! MonthlyDate >> "+ start_date+" / "+ end_date)
 
     let sql = "SELECT TO_CHAR(TO_DATE(SALEDT, 'YYYYMM'), 'YYYY/MM') SALEDT, ";
+    sql += "        ROUND(NVL(SUM(TOTSILAMT), 0)/1000000, 0) AS TOTSILAMT , ";   
     sql += "        ROUND(NVL(SUM(MISILAMT), 0)/1000000, 0) AS MISILAMT , ";
     sql += "        ROUND(NVL(SUM(MOSILAMT), 0)/1000000, 0) AS MOSILAMT , ";
     sql += "        ROUND(NVL(SUM(ITSILAMT), 0)/1000000, 0) AS ITSILAMT , ";
     sql += "        ROUND(NVL(SUM(INSILAMT), 0)/1000000, 0) AS INSILAMT ";
     sql += "FROM   (SELECT SALEDT , ";
+    sql += "            SILAMT TOTSILAMT, "; 
     sql += "            DECODE(BRCD, 'MI', SILAMT) MISILAMT , ";
     sql += "            DECODE(BRCD, 'MO', SILAMT) MOSILAMT , ";
     sql += "            DECODE(BRCD, 'IT', SILAMT) ITSILAMT , ";
@@ -873,7 +878,86 @@ exports.getMonthlySaleList = (req, res) => {
     sql += "                GROUP BY BRCD, SALEDT )) ";
     sql += "GROUP BY SALEDT ORDER BY SALEDT ";
   
-    //console.log(sql);
+    console.log("getMonthlySaleList========>"+sql);
+    
+    axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault));
+};
+
+// 일별 매출 현황
+exports.getDailySaleList_POP = (req, res) => {
+    console.log("============== getDailySaleList_POP Call ======================");
+    let month = req.query.month;
+    let date = req.query.date;
+    
+    let start_date = date.substr(0, 4) + "" + month + "01";
+    let end_date = Number(month) != Number(moment().format("MM")) ? moment(start_date, "YYYYMMDD").endOf('month').format("YYYYMMDD") : date;
+
+    console.log("!! DailyDate >> "+ month + " / " + moment().format("MM") + " / " + start_date + " / " + end_date);
+
+    let sql = "SELECT DAY, ";
+    sql += "    SUM(TDAYTOT) AS TDAYTOT, ";
+    sql += "    SUM(TDAYON) AS TDAYON, ";
+    sql += "    ROUND(SUM(TDAYON)/SUM(TDAYTOT)*100, 2) AS TDAYRAT, ";
+    sql += "    SUM(MIDAYTOT) AS MIDAYTOT, ";
+    sql += "    SUM(MIDAYON) AS MIDAYON, ";
+    sql += "    SUM(MIDAYRAT) AS MIDAYRAT, ";
+    sql += "    SUM(MODAYTOT) AS MODAYTOT, ";
+    sql += "    SUM(MODAYON) AS MODAYON, ";
+    sql += "    SUM(MODAYRAT) AS MODAYRAT, ";
+    sql += "    SUM(ITDAYTOT) AS ITDAYTOT, ";
+    sql += "    SUM(ITDAYON) AS ITDAYON, ";
+    sql += "    SUM(ITDAYRAT) AS ITDAYRAT, ";
+    sql += "    SUM(INDAYTOT) AS INDAYTOT, ";
+    sql += "    SUM(INDAYON) AS INDAYON, ";
+    sql += "    SUM(INDAYRAT) AS INDAYRAT ";
+    sql += " FROM   (SELECT DAY, ";
+    sql += "            CASE WHEN BRCD IN ('MI', 'MO', 'IT', 'IN') THEN DAYTOT END AS TDAYTOT, ";
+    sql += "            CASE WHEN BRCD IN ('MI', 'MO', 'IT', 'IN') THEN DAYON END AS TDAYON, ";
+    sql += "            CASE WHEN BRCD = 'MI' THEN DAYTOT END AS MIDAYTOT, ";
+    sql += "            CASE WHEN BRCD = 'MI' THEN DAYON END AS MIDAYON, ";
+    sql += "            CASE WHEN BRCD = 'MI' THEN DAYRAT END AS MIDAYRAT, ";
+    sql += "            CASE WHEN BRCD = 'MO' THEN DAYTOT END AS MODAYTOT, ";
+    sql += "            CASE WHEN BRCD = 'MO' THEN DAYON END AS MODAYON, ";
+    sql += "            CASE WHEN BRCD = 'MO' THEN DAYRAT END AS MODAYRAT, ";
+    sql += "            CASE WHEN BRCD = 'IT' THEN DAYTOT END AS ITDAYTOT, ";
+    sql += "            CASE WHEN BRCD = 'IT' THEN DAYON END AS ITDAYON, ";
+    sql += "            CASE WHEN BRCD = 'IT' THEN DAYRAT END AS ITDAYRAT, ";
+    sql += "            CASE WHEN BRCD = 'IN' THEN DAYTOT END AS INDAYTOT, ";
+    sql += "            CASE WHEN BRCD = 'IN' THEN DAYON END AS INDAYON, ";
+    sql += "            CASE WHEN BRCD = 'IN' THEN DAYRAT END AS INDAYRAT ";
+    sql += "     FROM   (SELECT BRCD, ";
+    sql += "                    DAY, ";
+    sql += "                    CASE WHEN DAYTOT = 0 THEN 0 ";
+    sql += "                    ELSE ROUND(DAYTOT/1000, 0) END DAYTOT, ";
+    sql += "                    CASE WHEN DAYON = 0 THEN 0 ";
+    sql += "                    ELSE ROUND(DAYON/1000, 0) END DAYON, ";
+    sql += "                    CASE WHEN DAYON = 0 THEN 0 ";
+    sql += "                    ELSE ROUND(DAYON/DAYTOT*100, 2) END DAYRAT ";
+    sql += "             FROM   (SELECT BRCD, ";
+    sql += "                            DAY, ";
+    sql += "                            NVL(SUM(DAYTOT), 0) AS DAYTOT , ";
+    sql += "                            NVL(SUM(DAYJASA), 0)+NVL(SUM(DAYOUT), 0) AS DAYON ";
+    sql += "                     FROM   (SELECT BRCD, ";
+    sql += "                                    SUBSTR(SALEDT, 7, 2) AS DAY, ";
+    sql += "                                    SILAMT AS DAYTOT, ";
+    sql += "                                    CASE  ";
+    sql += "                                     WHEN VDCD IN ('MI615', 'MID85', 'IT519', 'IT520', 'IN804', 'SO885') ";
+    sql += "                                     THEN SILAMT ";
+    sql += "                                    END DAYJASA, ";
+    sql += "                                    CASE WHEN VDCD IN ('IT515', 'IT518', 'IT524') THEN SILAMT ";
+    sql += "                                         WHEN SUCD = '23' AND    VDCD <> 'IN804' THEN SILAMT ";
+    sql += "                                    END DAYOUT ";
+    sql += "                             FROM   BION060 ";
+    sql += "                             WHERE  SALEDT BETWEEN '" + start_date + "' AND '" + end_date + "' ";
+    sql += "                             AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM   BION060) ) ";
+    sql += "                     WHERE  BRCD <> 'SO' ";
+    sql += "                     GROUP BY BRCD, DAY ";
+    sql += "                     ) ";
+    sql += "            ) ";
+    sql += "    ) ";
+    sql += " GROUP BY DAY ";
+    sql += " ORDER BY DAY";
+    console.log("getDailySaleList >>> ", sql);
     
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault));
 };
