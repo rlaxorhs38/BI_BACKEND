@@ -51,6 +51,9 @@ router.get('/getsalesRanking', fin0102.getsalesRanking);
 router.get('/getPerformanceList', fin0102.getPerformanceList);
 router.get('/getMonthGoal', fin0102.getMonthGoal);
 
+/* FIN0104 */
+router.get('/getStoreByDate', fin0102.getStoreByDate);
+
 /* FIN0201 */
 router.get('/getSaleData2', fin0201.getSaleData);
 router.get('/getSaleTotRate', fin0201.getSaleTotRate);

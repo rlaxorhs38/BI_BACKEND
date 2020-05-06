@@ -14,13 +14,14 @@ exports.getRecentBISL061Date = (req, res) => {
 
 exports.getTotalSalesData = (req, res) => {
     console.log("============== getTotalSalesData Call ======================");
-
+    
     let tabType = req.query.tabType;
     let date = req.query.date;
     let authCodeList = req.query.authCodeList.split(',');
     let monthStartDate = req.query.monthStartDate;
-
+    
     // 사업부별 일매출
+    /*
     let sql = "SELECT SUNM, " + tabType + " MCODE, SUM(SALE_TOT) AS SALE_TOT, SUM(SALE_MONTH_TOT) AS SALE_MONTH_TOT, SUM(AMT) AS AMT FROM ( "
     sql += "SELECT SUNM, " + tabType + ", SALE_TOT, 0 AS SALE_MONTH_TOT, 0 AS AMT FROM ( "
     sql += "SELECT SUNM, " + tabType + ", SUM(JAMT+DCAMT+GAMT+ADVDEPAMT)AS SALE_TOT FROM BISL061 "
@@ -37,7 +38,42 @@ exports.getTotalSalesData = (req, res) => {
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
     sql += "GROUP BY SUNM, " + tabType + ") ";
     sql += ") GROUP BY SUNM, " + tabType
-
+    */
+    let sql = "SELECT " + tabType + " MCODE, ";
+    sql += "       SUM(SALE_TOT) AS SALE_TOT, ";
+    sql += "       SUM(SALE_MONTH_TOT) AS SALE_MONTH_TOT, ";
+    sql += "       SUM(AMT) AS AMT, ";
+    sql += "       DECODE(" + tabType + ",'1',1,'4',2,'3',3,'12',4,'21',5) AS SORT ";
+    sql += "FROM   (SELECT " + tabType + ", ";
+    sql += "               SALE_TOT, ";
+    sql += "               0 AS SALE_MONTH_TOT, ";
+    sql += "               0 AS AMT ";
+    sql += "        FROM   (SELECT DECODE(" + tabType + ",'5','3'," + tabType + ") AS " + tabType + ", ";
+    sql += "                       SUM(JAMT+DCAMT+GAMT+ADVDEPAMT)AS SALE_TOT ";
+    sql += "                FROM   BISL061 ";
+    sql += "                WHERE  " + tabType + " IN ('1', '12', '4', '3', '21', '5') ";
+    sql += "                AND    SALEDT = '" + date + "' ";
+    sql += "                AND    CREATEDATE = (SELECT MAX(CREATEDATE) ";
+    sql += "                        FROM   BISL061) ";
+    sql += "                GROUP BY " + tabType + ") ";
+    sql += "        UNION ALL ";
+    sql += "        SELECT " + tabType + ", ";
+    sql += "               0 AS SALE_TOT, ";
+    sql += "               SALE_MONTH_TOT, ";
+    sql += "               TARGETAMT AS AMT ";
+    sql += "        FROM   (SELECT DECODE(" + tabType + ",'5','3'," + tabType + ") AS " + tabType + ", ";
+    sql += "                       SUM((JAMT+DCAMT+GAMT+ADVDEPAMT))AS SALE_MONTH_TOT, ";
+    sql += "                       SUM(TARGETAMT) TARGETAMT ";
+    sql += "                FROM   BISL061 ";
+    sql += "                WHERE  " + tabType + " IN ('1', '12', '4', '3', '21', '5') ";
+    sql += "                AND    SALEDT BETWEEN '" + monthStartDate + "' AND '" + date + "' ";
+    sql += "                AND    CREATEDATE = (SELECT MAX(CREATEDATE) ";
+    sql += "                        FROM   BISL061) ";
+    sql += "                GROUP BY " + tabType + ") ) ";
+    sql += "GROUP BY " + tabType + ",SORT ";
+    sql += "ORDER BY SORT ";
+    console.log("getTotalSalesData >>>> ", sql);
+    
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
 };
 
@@ -50,6 +86,7 @@ exports.getCumulativeData = (req, res) => {
     let monthStartDate = req.query.monthStartDate;
 
     // 당일 매출, 당일 매출 목표, 월 누적매출, 월 매출 목표,
+    /*
     let sql = "SELECT SUNM, " + tabType + " MCODE, ";
     sql += "       SUM(SALE_YEAR_TOT) AS SALE_YEAR_TOT, SUM(YEAR_AMT) AS YEAR_AMT,  ";
     sql += "       SUM(SALE_MONTH_TOT) AS SALE_MONTH_TOT, SUM(MONTH_AMT) AS MONTH_AMT, ";
@@ -86,6 +123,64 @@ exports.getCumulativeData = (req, res) => {
     sql += "        AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
     sql += "        GROUP BY SUNM, " + tabType + ") ";
     sql += ") GROUP BY SUNM, " + tabType + "";
+    */
+    let sql = "SELECT SUCD MCODE, ";
+    sql += "       SUM(SALE_YEAR_TOT) AS SALE_YEAR_TOT, ";
+    sql += "       SUM(YEAR_AMT) AS YEAR_AMT, ";
+    sql += "       SUM(SALE_MONTH_TOT) AS SALE_MONTH_TOT, ";
+    sql += "       SUM(MONTH_AMT) AS MONTH_AMT, ";
+    sql += "       SUM(SALE_TOT) AS SALE_TOT, ";
+    sql += "       SUM(AMT) AS AMT, ";
+    sql += "       DECODE(SUCD,'1',1,'4',2,'3',3,'12',4,'21',5) AS SORT ";
+    sql += "FROM   (SELECT SUCD, ";
+    sql += "               SALE_TOT AS SALE_YEAR_TOT, ";
+    sql += "               AMT AS YEAR_AMT, ";
+    sql += "               0 AS SALE_MONTH_TOT, ";
+    sql += "               0 AS MONTH_AMT, ";
+    sql += "               0 AS SALE_TOT, ";
+    sql += "               0 AS AMT ";
+    sql += "        FROM   (SELECT DECODE(SUCD,'5','3',SUCD) AS SUCD, ";
+    sql += "                       SUM((JAMT+DCAMT+GAMT+ADVDEPAMT))AS SALE_TOT, ";
+    sql += "                       SUM(TARGETAMT) AMT ";
+    sql += "                FROM   BISL061 ";
+    sql += "                WHERE  SUCD IN ('1', '12', '4', '3', '21', '5') ";
+    sql += "                AND    SALEDT BETWEEN '" + monthStartDate + "' AND '" + date + "' ";
+    sql += "                AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM   BISL061) ";
+    sql += "                GROUP BY SUCD) ";
+    sql += "        UNION ALL ";
+    sql += "        SELECT SUCD, ";
+    sql += "               0 AS SALE_YEAR_TOT, ";
+    sql += "               0 AS YEAR_AMT, ";
+    sql += "               SALE_MONTH_TOT, ";
+    sql += "               TARGETAMT AS MONTH_AMT, ";
+    sql += "               0 AS SALE_TOT, ";
+    sql += "               0 AS AMT ";
+    sql += "        FROM   (SELECT DECODE(SUCD,'5','3',SUCD) AS SUCD, ";
+    sql += "                       SUM((JAMT+DCAMT+GAMT+ADVDEPAMT)) AS SALE_MONTH_TOT, ";
+    sql += "                       SUM(TARGETAMT) TARGETAMT ";
+    sql += "                FROM   BISL061 ";
+    sql += "                WHERE  SUCD IN ('1', '12', '4', '3', '21', '5') ";
+    sql += "                AND    SALEDT BETWEEN '" + monthStartDate + "' AND '" + date + "' ";
+    sql += "                AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM   BISL061) ";
+    sql += "                GROUP BY SUCD) ";
+    sql += "        UNION ALL ";
+    sql += "        SELECT SUCD, ";
+    sql += "               0 AS SALE_YEAR_TOT, ";
+    sql += "               0 AS YEAR_AMT, ";
+    sql += "               0 AS SALE_MONTH_TOT, ";
+    sql += "               0 AS MONTH_AMT, ";
+    sql += "               SALE_TOT, ";
+    sql += "               AMT ";
+    sql += "        FROM   (SELECT DECODE(SUCD,'5','3',SUCD) AS SUCD, ";
+    sql += "                       SUM((JAMT+DCAMT+GAMT+ADVDEPAMT))AS SALE_TOT, ";
+    sql += "                       SUM(TARGETAMT) AMT ";
+    sql += "                FROM   BISL061 ";
+    sql += "                WHERE  SUCD IN ('1', '12', '4', '3', '21', '5') ";
+    sql += "                AND    SALEDT = '" + date + "' ";
+    sql += "                AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM   BISL061) ";
+    sql += "                GROUP BY SUCD) ) ";
+    sql += "GROUP BY SORT,SUCD  ";
+    sql += "ORDER BY SORT ";
 
     console.log("getCumulativeData >>>??? "+sql);
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
@@ -93,19 +188,19 @@ exports.getCumulativeData = (req, res) => {
 
 exports.getChartData2 = (req, res) => {
     console.log("============== getChartData2 Call ======================");
-
+    
     let tabType = req.query.tabType;
     let code = req.query.code;
     let lastYear30day = req.query.lastYear30day;
     let lastYearSelectDay = req.query.lastYearSelectDay;
-
+    
     let searchType = req.query.searchType.toString();
     let start_date = "";
-
+    
     // 매출추이
     // 작년동기매출
     let sql = "SELECT SALEDT, "
-
+    
     if(code == "A") {
         sql += " 'ALL' AS "
     }
@@ -121,6 +216,7 @@ exports.getChartData2 = (req, res) => {
     }
     sql += "ORDER BY SALEDT"
     
+    console.log("getChartData2 >>>??? "+sql);
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
 };
 
@@ -129,39 +225,78 @@ exports.getCurrentYearData = (req, res) => {
 
     let tabType = req.query.tabType;
     let code = req.query.code;
-    let last30day = req.query.last30day;
-    let date = req.query.date;
     let searchType = req.query.searchType.toString();
-    let start_date = "";
+
+    let start_date = req.query.start_date;
+    let date = req.query.date;
+
+    let end_date = moment(date, "YYYYMMDD").endOf('month').format("YYYYMMDD");
 
     // 일별매출, 일별매출목표
+    /*
     let sql = "SELECT"
     if(searchType == "1") {
-        start_date = last30day;
         sql += " SALEDT, "
     } else if(searchType == "2") {
-        start_date = (Number(date.substr(0, 4))-1).toString() + date.substr(4, 2) +'01';
         sql += " TO_CHAR(TO_DATE(SALEDT, 'YYYYMMDD'), 'YYYY/MM') SALEDT, "
     } else {
-        start_date = (Number(date.substr(0, 4))-4)+'0101';
         sql += " TO_CHAR(TO_DATE(SALEDT, 'YYYYMMDD'), 'YYYY') SALEDT, "
     }
-    if(code == "A") {
-        sql += "'ALL' AS "
-    } 
-    sql += "SUNM, SUM(TARGETAMT) AS AMT, SUM(JAMT+DCAMT+GAMT+ADVDEPAMT) AS SALE_TOT FROM BISL061 "
+    sql += "SUM(TARGETAMT) AS AMT, SUM(JAMT+DCAMT+GAMT+ADVDEPAMT) AS SALE_TOT FROM BISL061 "
     sql += "WHERE SALEDT BETWEEN '" + start_date + "' AND '" + date + "' "
-    if(code != "A") {
-        sql += "AND " + tabType + " = '" + code + "' "
+    if(code == "A") {
+        sql += "AND " + tabType + " IN ('1', '12', '4', '3', '21', '5') "
+    } else if(code == "3") {
+        sql += "AND " + tabType + " IN ('3', '5') "
     } else {
-        sql += "AND " + tabType + " IN ('1', '12', '4', '3', '21') "
+        sql += "AND " + tabType + " = '" + code + "' "
     }
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
     sql += "GROUP BY SALEDT "
-    if(code != "A") {
-        sql += ", SUNM "
-    }
     sql += "ORDER BY SALEDT "
+    */
+
+    let sql = "SELECT";
+    if(searchType == "1") {
+        sql += " SALEDT, "
+    } else if(searchType == "2") {
+        sql += " TO_CHAR(TO_DATE(SALEDT, 'YYYYMMDD'), 'YYYY/MM') SALEDT, "
+    } else {
+        sql += " TO_CHAR(TO_DATE(SALEDT, 'YYYYMMDD'), 'YYYY') SALEDT, "
+    }
+    sql += " SUM(AMT) AS AMT, SUM(SALE_TOT) AS SALE_TOT FROM ( ";
+    sql += "        SELECT SALEDT, ";
+    sql += "               0 AS AMT, ";
+    sql += "               SUM(JAMT+DCAMT+GAMT+ADVDEPAMT) AS SALE_TOT ";
+    sql += "        FROM   BISL061 ";
+    sql += "        WHERE  SALEDT BETWEEN '" + start_date + "' AND '" + date + "' ";
+    if(code == "A") {
+        sql += "AND " + tabType + " IN ('1', '12', '4', '3', '21', '5') "
+    } else if(code == "3") {
+        sql += "AND " + tabType + " IN ('3', '5') "
+    } else {
+        sql += "AND " + tabType + " = '" + code + "' "
+    }
+    sql += "        AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM   BISL061) ";
+    sql += "        GROUP BY SALEDT ";
+    sql += "        UNION ALL ";
+    sql += "        SELECT YYYYMMDD AS SALEDT, ";
+    sql += "               SUM(AMT) AS AMT, ";
+    sql += "               0 AS SALE_TOT ";
+    sql += "        FROM   BISL010 ";
+    sql += "        WHERE  YYYYMMDD BETWEEN '" + start_date + "' AND '" + end_date + "' ";
+    if(code == "A") {
+        sql += "AND " + tabType + " IN ('1', '12', '4', '3', '21', '5') "
+    } else if(code == "3") {
+        sql += "AND " + tabType + " IN ('3', '5') "
+    } else {
+        sql += "AND " + tabType + " = '" + code + "' "
+    }
+    sql += "        AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM   BISL010) ";
+    sql += "        GROUP BY YYYYMMDD ";
+    sql += "     ) ";
+    sql += "GROUP BY SALEDT ";
+    sql += "ORDER BY SALEDT ";
     
     console.log("매출추이 >>> ", sql)
 
@@ -182,7 +317,11 @@ exports.getStoreList = (req, res) => {
     sql += "WHERE SALEDT = '"+ date +"' "
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL060) ";
     sql += "GROUP BY VDSNM, SUCD "
-    if(code != "A") {
+    if(code == "A") {
+        sql += "HAVING " + tabType + " IN ('1', '12', '4', '3', '21', '5') "
+    } else if(code == "3") {
+        sql += "HAVING " + tabType + " IN ('" + code + "', '5') "
+    } else {
         sql += "HAVING " + tabType + " = '" + code + "' "
     }
     sql += "ORDER BY SALE_TOT "
@@ -311,21 +450,19 @@ exports.getCumulativeSales = (req, res) => {
     let year = date.substr(0, 4);
 
     let allCode = ""
-    let allName = ""
-    let strTxt2 = ""
+    let groupBy = ""
     if(code == "A") {
-        allCode = "'ALL' AS "
-        allName = "'전체' AS "
+        allCode = "MAX('ALL') AS "
     } else {
-        strTxt2 = "SUNM, SUCD, "
+        groupBy = "SUCD, "
     }
 
     // 매출 추이 누적
-    let sql ="SELECT " + allName + "SUNM, " + allCode + "SUCD, SUBSTR(SALEDT, 5, 2) AS SALEDT, "
+    let sql ="SELECT SUCD, SALEDT, "
     sql += "    ROUND(SUM(NOW_MONTH_TOT)/1000000, 0) AS SALE_TOT, ";
     sql += "    ROUND(SUM(PRE_MONTH_TOT)/1000000, 0) AS LY_SALE_TOT, ";
     sql += "    ROUND(SUM(TARGETAMT)/1000000, 0) AS AMT ";
-    sql += "FROM   (SELECT " + strTxt2 + "SUBSTR(SALEDT, 1, 6) AS SALEDT, ";
+    sql += "FROM   (SELECT " + allCode + "SUCD, SUBSTR(SALEDT, 5, 2) AS SALEDT, ";
     sql += "            SUM(JAMT+DCAMT+GAMT+ADVDEPAMT) AS NOW_MONTH_TOT, ";
     sql += "            0 AS PRE_MONTH_TOT, ";
     sql += "            SUM(TARGETAMT) AS TARGETAMT ";
@@ -337,9 +474,9 @@ exports.getCumulativeSales = (req, res) => {
         sql += "    AND " + tabType + " IN ('1','12','4','3','21','5') ";
     }
     sql += "        AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
-    sql += "        GROUP BY " + strTxt2 + "SALEDT ";
+    sql += "        GROUP BY " + groupBy + "SALEDT ";
     sql += "        UNION ALL ";
-    sql += "        SELECT " + strTxt2 + "SUBSTR(SALEDT, 1, 6) AS SALEDT, ";
+    sql += "        SELECT " + allCode + "SUCD, SUBSTR(SALEDT, 5, 2) AS SALEDT, ";
     sql += "            0 AS NOW_MONTH_TOT, ";
     sql += "            SUM(JAMT+DCAMT+GAMT+ADVDEPAMT) AS PRE_MONTH_TOT, ";
     sql += "            0 AS TARGETAMT ";
@@ -351,8 +488,8 @@ exports.getCumulativeSales = (req, res) => {
         sql += "    AND " + tabType + " IN ('1','12','4','3','21','5') ";
     }
     sql += "        AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
-    sql += "        GROUP BY " + strTxt2 + "SALEDT ) ";
-    sql += "GROUP BY " + strTxt2 + "SALEDT ";
+    sql += "        GROUP BY " + groupBy + "SALEDT ) ";
+    sql += "GROUP BY SUCD, SALEDT ";
     sql += "ORDER BY SALEDT ";
 
     console.log("getCumulativeSales >>> ", sql)

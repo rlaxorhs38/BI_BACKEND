@@ -86,9 +86,7 @@ exports.getPerformanceList = (req, res) => {
 
     // 일목표 대비 실적
     let sql = "SELECT  DAY  "
-    if(code == "A") {
-        sql += "        ,SUM(TARGETAMT) AS TOTTARGETAMT, SUM(SAMT) AS TOTSAMT "
-    }
+    sql += "        ,SUM(TARGETAMT) AS TOTTARGETAMT, SUM(SAMT) AS TOTSAMT "
     if(code == "A" || code == "1") {
         sql += "        ,SUM(MITARGETAMT) AS MITARGETAMT, SUM(MISAMT) AS MISAMT "
     }
@@ -185,6 +183,48 @@ exports.getMonthGoal = (req, res) => {
     sql += "    )"
     sql += " )"
     console.log("getMonthGoal Call >>> ", sql);
+    
+    axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
+};
+
+// 매장별 일자별
+exports.getStoreByDate = (req, res) => {
+    console.log("============== getStoreByDate Call ======================");
+    
+    let vdcd = req.query.vdcd;
+    let date = req.query.date;
+    
+    let start_date = date.substr(0, 6) + "01";
+
+    // 전체 목표 금액
+    let sql = "SELECT VDCD, VDSNM, SALEDT, "
+    sql += "SALE_TOT, QTY_TOT, "
+    sql += "       JAMT, JQTY, "
+    sql += "       DCAMT, DCQTY, "
+    sql += "       GAMT, GQTY, "
+    sql += "       R_JAMT, R_JQTY, "
+    sql += "       R_DCAMT, R_DCQTY, "
+    sql += "       R_GAMT, R_GQTY, "
+    sql += "       ADVDEPAMT "
+    sql += "  FROM (SELECT VDCD, VDSNM, SALEDT, "
+    sql += "               SUM(JAMT+DCAMT+GAMT+ADVDEPAMT) AS SALE_TOT, "
+    sql += "               SUM(JQTY+DCQTY+GQTY) AS QTY_TOT, "
+    sql += "               SUM(JSAMT) JAMT, SUM(JSQTY) JQTY, "
+    sql += "               SUM(DCSAMT) DCAMT, SUM(DCSQTY) DCQTY, "
+    sql += "               SUM(GSAMT) GAMT, SUM(GSQTY) GQTY, "
+    sql += "               SUM(JRAMT) R_JAMT, SUM(JRQTY) R_JQTY, "
+    sql += "               SUM(DCRAMT) R_DCAMT, SUM(DCRQTY) R_DCQTY, "
+    sql += "               SUM(GRAMT) R_GAMT, SUM(GRQTY) R_GQTY, "
+    sql += "               SUM(ADVDEPAMT) ADVDEPAMT "
+    sql += "          FROM BISL060 "
+    sql += "         WHERE SALEDT BETWEEN '" + start_date + "' AND '" + date + "' "
+    sql += "           AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL060) "
+    sql += "           AND VDCD = '" + vdcd + "' "
+    sql += "         GROUP BY VDCD, VDSNM, SUCD, SALEDT "
+    sql += "        HAVING SUCD IN ('1', '12', '21', '23', '4', '3', '5') "
+    sql += "         ORDER BY SALEDT) "
+
+    console.log("getStoreByDate Call >>> ", sql);
     
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
 };
