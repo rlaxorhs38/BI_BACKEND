@@ -381,9 +381,12 @@ exports.getSalesChartCount = (req, res) => {
     }
     sql += "SUM(JSQTY) JQTY, SUM(DCSQTY) DCQTY, SUM(GSQTY) GQTY, SUM(JRQTY) R_JQTY, SUM(DCRQTY) R_DCQTY, SUM(GRQTY) R_GQTY FROM BISL061 "
     sql += "WHERE SALEDT BETWEEN '"+ start_date +"' AND '"+ date +"' "
-    if(code != "A") {
-        sql += "AND " + tabType + " = '" + code + "' "
+    if(code == "A") {
+        sql += "AND " + tabType + " IN ('1', '12', '4', '3', '21', '5')"
+    } else if(code == "3") {
+        sql += "AND " + tabType + " IN ('" + code + "', '5') "
     }
+
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
     sql += "GROUP BY SALEDT "
     if(searchType == "2") {
@@ -407,6 +410,8 @@ exports.getSalesChartAMT = (req, res) => {
     let start_date = "";
     let sql = "";
 
+    console.log("searchType >>> ", searchType);
+
     // 당일 판매, 반품 금액
     if(searchType == "2") {
         sql += "SELECT SALEDT, SUM(JAMT) JAMT, SUM(DCAMT) DCAMT, SUM(GAMT) GAMT, SUM(R_JAMT) R_JAMT, SUM(R_DCAMT) R_DCAMT, SUM(R_GAMT) R_GAMT, SUM(ADVDEPAMT) ADVDEPAMT FROM ( "
@@ -424,8 +429,10 @@ exports.getSalesChartAMT = (req, res) => {
     }
     sql += " SUM(JSAMT) JAMT, SUM(DCSAMT) DCAMT, SUM(GSAMT) GAMT, SUM(JRAMT) R_JAMT, SUM(DCRAMT) R_DCAMT, SUM(GRAMT) R_GAMT, SUM(ADVDEPAMT) ADVDEPAMT FROM BISL061 "
     sql += "WHERE SALEDT BETWEEN '"+ start_date +"' AND '"+ date +"' "
-    if(code != "A") {
-        sql += "AND " + tabType + " = '" + code + "' "
+    if(code == "A") {
+        sql += "AND " + tabType + " IN ('1', '12', '4', '3', '21', '5')"
+    } else if(code == "3") {
+        sql += "AND " + tabType + " IN ('" + code + "', '5') "
     }
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
     sql += "GROUP BY SALEDT "
@@ -482,11 +489,15 @@ exports.getCumulativeSales = (req, res) => {
     sql += "            0 AS TARGETAMT ";
     sql += "        FROM   BISL061 ";
     sql += "        WHERE  SALEDT BETWEEN '" + (Number(year)-1).toString() + "0101' AND '" + (Number(year)-1).toString() + "1231'";
-    if(code != "A") {
-        sql += "    AND " + tabType + " = '" + code + "' ";
+
+    if(code == "A") {
+        sql += "    AND " + tabType + " IN ('1','12','4','3','21','5') "
+    } else if(code == "3") {
+        sql += "    AND " + tabType + " IN ('" + code + "', '5') "
     } else {
-        sql += "    AND " + tabType + " IN ('1','12','4','3','21','5') ";
+        sql += "    AND " + tabType + " = '" + code + "' ";
     }
+    
     sql += "        AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
     sql += "        GROUP BY " + groupBy + "SALEDT ) ";
     sql += "GROUP BY SUCD, SALEDT ";
