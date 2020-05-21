@@ -31,14 +31,7 @@ exports.getDailySalesData = (req, res) => {
 
     // 사업부별 일매출, 달성률
     let sql = "SELECT SUNM, " + tabType + " MCODE, TARGETAMT AMT, SUM(JAMT+DCAMT+GAMT+ADVDEPAMT)AS SALE_TOT FROM BISL061 ";
-    sql += "WHERE " + tabType + " IN ("
-    for (let i=0;i<authCodeList.length;i++) {
-        sql += "'" + authCodeList[i] + "'"
-        if (i < authCodeList.length - 1) {
-            sql += ","
-        }
-    }
-    sql += ") ";
+    sql += "WHERE " + tabType + " IN ('1', '12', '4', '3', '21', '5') ";
     sql += "AND SALEDT = '" + date + "' ";
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
     sql += "GROUP BY SUNM, " + tabType + ", AMT";

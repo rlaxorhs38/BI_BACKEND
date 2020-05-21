@@ -49,7 +49,7 @@ exports.getAssignedPageList = (req, res, next) => {
     let empcd = req.query.empcd;
 
     // 화면 권한 가져오기
-    let sql = "SELECT GBNCD, PROCD, VIEWYN, PRINTYN FROM BIGR010_DEV ";
+    let sql = "SELECT GBNCD, PROCD, VIEWYN, PRINTYN FROM BIGR010 ";
     sql += "WHERE EMPCD = '" + empcd + "' ";
 
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
@@ -57,9 +57,9 @@ exports.getAssignedPageList = (req, res, next) => {
 
 exports.getAssignedSUList = (req, res, next) => {
     console.log("============== getAssignedSUList Call ======================");
-
+    
     let empcd = req.query.empcd;
-
+    
     // 사업부 권한 가져오기
     let sql = "SELECT GBNCD, MCODE, CODNM, SORTORD FROM ";
     sql += "(SELECT GBNCD, MCODE FROM BIGR010 ";
@@ -73,7 +73,8 @@ exports.getAssignedSUList = (req, res, next) => {
     sql += "ORDER BY SORTORD) B ";
     sql += "WHERE A.MCODE = B.CODE ";
     sql += "ORDER BY A.GBNCD, B.SORTORD";
-
+    console.log("getAssignedSUList >>> ", sql);
+    
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
 };
 
@@ -210,7 +211,7 @@ exports.getSTOList = (req, res, next) => {
     // 매장(브랜드 기준)
     let sql = "";
     sql += "SELECT A.GBNCD, A.MCODE, B.CODNM, B.SORTORD FROM ";
-    sql += "(SELECT GBNCD, MCODE FROM BICM012_DEV ";
+    sql += "(SELECT GBNCD, MCODE FROM BICM012 ";
     sql += "WHERE MENUCD = 'STO' ";
     sql += "AND VIEWYN = 'Y' ";
     sql += "GROUP BY GBNCD, MCODE ";
@@ -221,6 +222,7 @@ exports.getSTOList = (req, res, next) => {
     sql += "ORDER BY SORTORD) B ";
     sql += "WHERE A.MCODE = B.CODE ";
     sql += "ORDER BY B.SORTORD ";
+    console.log("스토어 getSTOList >>>", sql)
 
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
 };

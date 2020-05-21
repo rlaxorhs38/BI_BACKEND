@@ -305,7 +305,7 @@ exports.getCurrentYearData = (req, res) => {
 
 exports.getStoreList = (req, res) => {
     console.log("============== getStoreList Call ======================");
-
+    
     let tabType = req.query.tabType;
     let code = req.query.code;
     let date = req.query.date;
@@ -326,6 +326,7 @@ exports.getStoreList = (req, res) => {
     }
     sql += "ORDER BY SALE_TOT "
     sql += ")"
+    console.log("getStoreList Call >>>",sql)
 
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
 };
@@ -385,6 +386,8 @@ exports.getSalesChartCount = (req, res) => {
         sql += "AND " + tabType + " IN ('1', '12', '4', '3', '21', '5')"
     } else if(code == "3") {
         sql += "AND " + tabType + " IN ('" + code + "', '5') "
+    } else {
+        sql += "AND " + tabType + " = '" + code + "' "
     }
 
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
@@ -433,6 +436,8 @@ exports.getSalesChartAMT = (req, res) => {
         sql += "AND " + tabType + " IN ('1', '12', '4', '3', '21', '5')"
     } else if(code == "3") {
         sql += "AND " + tabType + " IN ('" + code + "', '5') "
+    } else {
+        sql += "AND " + tabType + " = '" + code + "' "
     }
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
     sql += "GROUP BY SALEDT "
