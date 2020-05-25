@@ -37,6 +37,7 @@ router.get('/getRecentBISL061Date', fin0101.getRecentBISL061Date);
 router.get('/getTotalSalesData', fin0101.getTotalSalesData);
 router.get('/getCumulativeData', fin0101.getCumulativeData);
 router.get('/getChartData2', fin0101.getChartData2);
+router.get('/getChartData2_1', fin0101.getChartData2_1);
 router.get('/getCurrentYearData', fin0101.getCurrentYearData);
 router.get('/getStoreList', fin0101.getStoreList);
 router.get('/getStoreMonthList', fin0101.getStoreMonthList);

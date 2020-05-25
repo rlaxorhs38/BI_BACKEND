@@ -216,7 +216,44 @@ exports.getChartData2 = (req, res) => {
     }
     sql += "ORDER BY SALEDT"
     
-    console.log("getChartData2 >>>??? "+sql);
+    console.log("getChartData2 >>> "+sql);
+    axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
+};
+
+exports.getChartData2_1 = (req, res) => {
+    console.log("============== getChartData2_1 Call ======================");
+    
+    let tabType = req.query.tabType;
+    let code = req.query.code;
+    let start_date = req.query.lastYear30day;
+    let end_date = req.query.lastYearSelectDay;
+    
+    let searchType = req.query.searchType.toString();
+    let temp_txt = ''
+    if(searchType == 2) {
+        temp_txt = "TO_CHAR(TO_DATE(SALEDT, 'YYYYMMDD'), 'YYYY/MM') "
+    } 
+    
+    // 매출추이
+    // 작년동기매출
+    let sql = "SELECT " + temp_txt + "SALEDT, "
+    
+    if(code == "A") {
+        sql += " 'ALL' AS "
+    }
+    sql += "SUNM, SUM(JAMT+DCAMT+GAMT+ADVDEPAMT) AS LY_SALE_TOT FROM BISL061 "
+    sql += "WHERE SALEDT BETWEEN '" + start_date + "' AND '" + end_date + "' "
+    if(code != "A") {
+        sql += "AND " + tabType + " = '" + code + "' "
+    }
+    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL061) ";
+    sql += "GROUP BY "+ temp_txt +" SALEDT "
+    if(code != "A") {
+        sql += ", SUNM "
+    }
+    sql += "ORDER BY SALEDT"
+    
+    console.log("getChartData2_1 >>>??? "+sql);
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
 };
 
@@ -309,12 +346,25 @@ exports.getStoreList = (req, res) => {
     let tabType = req.query.tabType;
     let code = req.query.code;
     let date = req.query.date;
+    let gubun = req.query.gubun;
+
+    let start_date = "";
+    if(gubun == '1' || gubun == 1) {
+        start_date = date;
+    } else if(gubun == '2' || gubun == 2) {
+        start_date = date.substr(0, 6) +"01"
+    } else if(gubun == '3' || gubun == 3) {
+        start_date = date.substr(0, 4) +"0101"
+    } else {
+        start_date = date;
+    }
+
 
     // 당일매출 순위
     let sql = "SELECT ROWNUM() RN, VDSNM, SALE_TOT FROM ( "
     sql += "SELECT VDSNM, SUM(JAMT+DCAMT+GAMT+ADVDEPAMT) AS SALE_TOT FROM BISL060 "
     // sql += "WHERE " + this.tabType + " = '" + code + "' "
-    sql += "WHERE SALEDT = '"+ date +"' "
+    sql += "WHERE SALEDT BETWEEN '" + start_date +"' AND '"+ date +"' "
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL060) ";
     sql += "GROUP BY VDSNM, SUCD "
     if(code == "A") {

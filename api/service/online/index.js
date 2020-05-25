@@ -815,29 +815,48 @@ exports.getDailySaleList = (req, res) => {
     let end_date = req.query.end_date;
     console.log("!! DailyDate >> "+ start_date+" / "+ end_date)
 
-    let sql = "SELECT TO_CHAR(TO_DATE(SALEDT, 'YYYYMMDD'), 'MM/DD') SALEDT, ";
-    sql += "        ROUND(NVL(SUM(TOTSILAMT), 0)/1000, 0) AS TOTSILAMT , ";    
-    sql += "        ROUND(NVL(SUM(MISILAMT), 0)/1000, 0) AS MISILAMT , ";
-    sql += "        ROUND(NVL(SUM(MOSILAMT), 0)/1000, 0) AS MOSILAMT , ";
-    sql += "        ROUND(NVL(SUM(ITSILAMT), 0)/1000, 0) AS ITSILAMT , ";
-    sql += "        ROUND(NVL(SUM(INSILAMT), 0)/1000, 0) AS INSILAMT ";
+    let sql = "SELECT TO_CHAR(TO_DATE(SALEDT, 'YYYYMMDD'), 'DD') SALEDT, ";
+    sql += "       ROUND(NVL(SUM(TOTSILAMT), 0)/1000, 0) AS TOTSILAMT , ";
+    sql += "       ROUND(NVL(SUM(MISILAMT), 0)/1000, 0) AS MISILAMT , ";
+    sql += "       ROUND(NVL(SUM(MOSILAMT), 0)/1000, 0) AS MOSILAMT , ";
+    sql += "       ROUND(NVL(SUM(ITSILAMT), 0)/1000, 0) AS ITSILAMT , ";
+    sql += "       ROUND(NVL(SUM(INSILAMT), 0)/1000, 0) AS INSILAMT, ";
+    sql += "        ";
+    sql += "       ROUND(NVL(SUM(TOTDAYTOT), 0)/1000, 0) AS TOTDAYTOT , ";
+    sql += "       ROUND(NVL(SUM(MIDAYTOT), 0)/1000, 0) AS MIDAYTOT , ";
+    sql += "       ROUND(NVL(SUM(MODAYTOT), 0)/1000, 0) AS MODAYTOT, ";
+    sql += "       ROUND(NVL(SUM(ITDAYTOT), 0)/1000, 0) AS ITDAYTOT, ";
+    sql += "       ROUND(NVL(SUM(INDAYTOT), 0)/1000, 0) AS INDAYTOT ";
     sql += "FROM   (SELECT SALEDT , ";
-    sql += "            SILAMT TOTSILAMT, "; 
-    sql += "            DECODE(BRCD, 'MI', SILAMT) MISILAMT , ";
-    sql += "            DECODE(BRCD, 'MO', SILAMT) MOSILAMT , ";
-    sql += "            DECODE(BRCD, 'IT', SILAMT) ITSILAMT , ";
-    sql += "            DECODE(BRCD, 'IN', SILAMT) INSILAMT ";
-    sql += "        FROM   (SELECT BRCD, SALEDT, SUM(SILAMT) AS SILAMT ";
-    sql += "                FROM   (SELECT BRCD , SALEDT , ";
-    sql += "                            CASE ";
-    sql += "                                WHEN VDCD IN ('MI615', 'MID85', 'IT519', 'IT520', 'IN804', 'SO885', 'IT515', 'IT518', 'IT524')  ";
-    sql += "                                THEN SILAMT WHEN SUCD = '23'  ";
-    sql += "                                            THEN SILAMT ELSE 0 ";
-    sql += "                            END SILAMT ";
+    sql += "               SILAMT TOTSILAMT, ";
+    sql += "               DECODE(BRCD, 'MI', SILAMT) MISILAMT , ";
+    sql += "               DECODE(BRCD, 'MO', SILAMT) MOSILAMT , ";
+    sql += "               DECODE(BRCD, 'IT', SILAMT) ITSILAMT , ";
+    sql += "               DECODE(BRCD, 'IN', SILAMT) INSILAMT, ";
+               
+    sql += "               DAYTOT TOTDAYTOT, ";
+    sql += "               DECODE(BRCD, 'MI', DAYTOT) MIDAYTOT, ";
+    sql += "               DECODE(BRCD, 'MO', DAYTOT) MODAYTOT, ";
+    sql += "               DECODE(BRCD, 'IT', DAYTOT) ITDAYTOT, ";
+    sql += "               DECODE(BRCD, 'IN', DAYTOT) INDAYTOT ";
+    sql += "        FROM   (SELECT BRCD, ";
+    sql += "                       SALEDT, ";
+    sql += "                       SUM(SILAMT) AS SILAMT, ";
+    sql += "                       SUM(DAYTOT) AS DAYTOT ";
+    sql += "                FROM   (SELECT BRCD , ";
+    sql += "                               SALEDT , ";
+    sql += "                               CASE ";
+    sql += "                                WHEN VDCD IN ('MI615', 'MID85', 'IT519', 'IT520', 'IN804', 'SO885', 'IT515', 'IT518', 'IT524') THEN SILAMT  ";
+    sql += "                                WHEN SUCD = '23' AND VDCD <> 'IN804' THEN SILAMT  ";
+    sql += "                               ELSE 0 END SILAMT, ";
+    sql += "                               SILAMT AS DAYTOT ";
     sql += "                        FROM   BION060 ";
     sql += "                        WHERE  SALEDT BETWEEN '"+start_date+"' AND '"+end_date+"' ";
-    sql += "                        AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM BION060) ) ";
-    sql += "                GROUP BY BRCD, SALEDT )) ";
+    sql += "                        AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM   BION060) ) ";
+    sql += "                WHERE BRCD <> 'SO' ";
+    sql += "                GROUP BY BRCD, SALEDT  ";
+    sql += "                ) ";
+    sql += "       ) ";
     sql += "GROUP BY SALEDT ";
     sql += "ORDER BY SALEDT ";
   
@@ -853,7 +872,7 @@ exports.getMonthlySaleList = (req, res) => {
     let end_date = req.query.end_date;
     console.log("!! MonthlyDate >> "+ start_date+" / "+ end_date)
 
-    let sql = "SELECT TO_CHAR(TO_DATE(SALEDT, 'YYYYMM'), 'YYYY/MM') SALEDT, ";
+    let sql = "SELECT TO_CHAR(TO_DATE(SALEDT, 'YYYYMM'), 'MM') SALEDT, ";
     sql += "        ROUND(NVL(SUM(TOTSILAMT), 0)/1000000, 0) AS TOTSILAMT , ";   
     sql += "        ROUND(NVL(SUM(MISILAMT), 0)/1000000, 0) AS MISILAMT , ";
     sql += "        ROUND(NVL(SUM(MOSILAMT), 0)/1000000, 0) AS MOSILAMT , ";
