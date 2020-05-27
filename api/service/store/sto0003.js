@@ -12,7 +12,7 @@ exports.getMainCurrentStatus = (req, res) => {
     if (month.toString().length == 1) {
         month = "0" + month
     }
-
+    
     let sql = "SELECT SUM(CNT) CNT, SUM(SILAMT) NOWMON, TO_CHAR(SUM(AVGMON)) AVGMON, TO_CHAR(ROUND(SUM(SILAMT)/SUM(CNT),0)) AVGVDCD FROM ( "
     sql += "SELECT SUM(CNT) CNT, SUM(NVL(SILAMT,0)) SILAMT, SUM(NVL(MONCNT,0)) MONCNT, ROUND(SUM(NVL(SILAMT,0))/SUM(NVL(MONCNT,0)), 0) AVGMON FROM ( "
     sql += "SELECT SUM(0) CNT, COUNT(SALEDT) MONCNT, SALEDT, SUM(SILAMT) SILAMT FROM ( "
@@ -34,7 +34,8 @@ exports.getMainCurrentStatus = (req, res) => {
     sql += ") "
     sql += ") "
     sql += ")"  
-
+    
+    console.log("getMainCurrentStatus >>> ", sql);
     // let sql = "SELECT CNT, NOWMON, TO_CHAR(AVGMON) AVGMON, TO_CHAR(ROUND(SILAMT/CNT,0)) AVGVDCD FROM ( "
     // sql += "SELECT SUM(CNT) CNT , SUM(NOWMON) NOWMON , "
     // sql += "SUM(NVL(SILAMT,0)) SILAMT , SUM(NVL(MONCNT,0)) MONCNT, "
@@ -820,6 +821,48 @@ exports.getStoreSalesAverage = (req, res) => {
     // sql += "                   AND SUCD = '" + sucd + "') )  "
     // sql += "    )   "
     // sql += ") "    
+
+    axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault));
+};
+
+exports.getSalesTotal = (req, res) => {
+    console.log("============== getSalesTotal Call ======================");
+    
+    let year = req.query.year
+    let month = req.query.month
+    
+    if (month.toString().length == 1) {
+        month = "0" + month
+    }
+    let jyear = Number(year-1).toString()
+    let sql = "SELECT SUM(NVL(SILAMT, 0)) SILAMT,  "
+    sql += "       SUM(NVL(J_SILAMT, 0)) JSILAMT, "
+    sql += "       SUCD, DECODE(SUCD,'1',1,'4',2,'3',3,'12',4,'21',5) AS SORT "
+    sql += "FROM ( "
+    sql += "        SELECT SUBSTR(SALEDT, 1, 6) SALEDT, "
+    sql += "               SUM(SILAMT) SILAMT, "
+    sql += "               SUM(0) J_SILAMT, "
+    sql += "               SUCD "
+    sql += "        FROM   BISL070 "
+    sql += "        WHERE  SUBSTR(SALEDT, 1, 6) BETWEEN '" + year + "01' AND '" + year + month + "' "
+    sql += "        AND    SUCD IN ('1', '12', '4', '3', '21', '5') "
+    sql += "        AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL070) "
+    sql += "        GROUP BY SALEDT, SUCD "
+    sql += "        UNION ALL "
+    sql += "        SELECT SUBSTR(SALEDT, 1, 6) SALEDT, "
+    sql += "               SUM(0) SILAMT, "
+    sql += "               SUM(SILAMT) J_SILAMT, "
+    sql += "               SUCD "
+    sql += "        FROM   BISL070 "
+    sql += "        WHERE  SUBSTR(SALEDT, 1, 6) BETWEEN '" + jyear + "01' AND '" + jyear + month + "' "
+    sql += "        AND    SUCD IN ('1', '12', '4', '3', '21', '5') "
+    sql += "        AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL070) "
+    sql += "        GROUP BY SALEDT, SUCD "
+    sql += "     )  "
+    sql += "GROUP BY SUCD, SORT "
+    sql += "ORDER BY SORT "
+    
+    console.log("getSalesTotal >>> ", sql);
 
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault));
 };

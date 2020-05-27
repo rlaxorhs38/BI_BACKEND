@@ -64,6 +64,8 @@ router.get('/getStoreSalesAverage', sto0003.getStoreSalesAverage);
 router.get('/getMonthAvg', sto0003.getMonthAvg);
 router.get('/getMonthStoreAvg', sto0003.getMonthStoreAvg);
 
+router.get('/getSalesTotal', sto0003.getSalesTotal);
+
 /* STO0004 */
 router.get('/getMakeDataDate6', sto0004.getMakeDataDate);
 router.get('/getMonthlySalesStatus', sto0004.getMonthlySalesStatus);

@@ -310,10 +310,10 @@ exports.getSaleDeptData = (req, res) => {
     }
 
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
-};
-
+  };
+  
 exports.getDepartmentList = (req, res) => {
-    console.log("============== getDepartmentList Call ======================");
+  console.log("============== getDepartmentList Call ======================");
 
     let choice = req.query.choice;
     let year = req.query.year;
@@ -322,7 +322,7 @@ exports.getDepartmentList = (req, res) => {
     let FasionSUCDCode = req.query.FasionSUCDCode.split(',');
     let FutureSUCDCode = req.query.FutureSUCDCode.split(',');
     let StopSUCDCode = req.query.StopSUCDCode.split(',');
-
+    
     let currentMonth = moment().format("M")
     let sql = ""
     if(choice == 1){
@@ -369,7 +369,7 @@ exports.getDepartmentList = (req, res) => {
       if (year != moment().format("YYYY")) {
         currentMonth = "12"
       }
-
+      
       sql += "SELECT SUCD, CODNM, PLNAMT, RSLTAMT FROM ( ";
       sql += "SELECT SUCD, SUM(PLNAMT) PLNAMT, SUM(RSLTAMT) RSLTAMT FROM BIFN050  ";
       sql += "WHERE SECGBN = '01' ";
@@ -410,18 +410,19 @@ exports.getDepartmentList = (req, res) => {
       sql += "WHERE A.SUCD = B.CODE ";
       sql += "ORDER BY SORTORD";
     }
-
+    
+    console.log("getDepartmentList >>>", sql);
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
-};
-
-exports.getSaleBrandDeptData = (req, res) => {
+  };
+  
+  exports.getSaleBrandDeptData = (req, res) => {
     console.log("============== getSaleBrandDeptData Call ======================");
 
     let choice = req.query.choice;
     let year = req.query.year;
     let month = req.query.month;
     let authBRCDCode = req.query.authBRCDCode.split(',');
-
+    
     let currentMonth = moment().format("M")
     let sql = ""
     if(choice == 1){
