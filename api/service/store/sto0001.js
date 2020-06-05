@@ -336,7 +336,7 @@ exports.getDailyStoreList = (req, res) => {
     sql += "WHERE 1=1 "
     sql += "AND SALEDT = '" + date + "' "
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL060) "
-    sql += "GROUP BY VDCD, SUCD "
+    sql += "GROUP BY VDCD, SUCD, " + tabType + " "
     sql += "HAVING " + tabType + " = '" + selectedCODE +  "' "
     sql += "AND VDCD IN ("
     for (let i=0;i<selectStoreList.length;i++) {
@@ -430,7 +430,7 @@ exports.getDailyTotalAMT = (req, res) => {
     sql += "SELECT  VDCD,SUCD, SUM(JAMT)+SUM(DCAMT)+SUM(GAMT)+SUM(ADVDEPAMT) AMT FROM BISL060 "
     sql += "WHERE SALEDT = '" + date + "' "
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL060) "
-    sql += "GROUP BY SUCD,VDCD "
+    sql += "GROUP BY SUCD,VDCD, " + tabType + " "
     sql += "HAVING " + tabType + " = '" + selectedCODE +  "' "
     sql += "AND VDCD IN ("
     for (let i=0;i<selectStoreList.length;i++) {
@@ -497,13 +497,14 @@ exports.getCumulativeTotalAMT = (req, res) => {
     sql += "AND SALEMM BETWEEN '" + "01" + "' AND '" + month + "' "
     sql += "AND VDCD IN ("
     for (let i=0;i<selectStoreList.length;i++) {
-    sql += "'" + selectStoreList[i].VDCD + "'"
-    if (i < selectStoreList.length - 1) {
-        sql += ","
-    }
+        sql += "'" + selectStoreList[i] + "'"
+        if (i < selectStoreList.length - 1) {
+            sql += ","
+        }
     }
     sql += ") "
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISH041)";
-
+    
+    console.log(" getCumulativeTotalAMT >>>", sql);
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault));
 };

@@ -47,6 +47,7 @@ router.get('/getCumulativeSales', fin0101.getCumulativeSales);
 
 /* FIN0102 */
 router.get('/getsalesRanking', fin0102.getsalesRanking);
+router.get('/getStoreList2', fin0102.getStoreList2);
 
 /* FIN0103 */
 router.get('/getPerformanceList', fin0102.getPerformanceList);

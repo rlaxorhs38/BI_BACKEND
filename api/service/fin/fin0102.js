@@ -2,6 +2,44 @@ var axios = require('axios');
 var moment = require('moment');
 const db = require('../../config/db')
 
+exports.getStoreList2 = (req, res) => {
+    console.log("============== getStoreList Call ======================");
+
+    let start_date = req.query.start_date;
+    let end_date = req.query.end_date;
+    let tabType = req.query.tabType;
+    let code = req.query.code;
+    console.log("getStoreList >>> ", start_date, ",", end_date)
+
+    // 매출 추이 누적
+    let sql = "SELECT ROWNUM() RN, VDCD, VDSNM, SUCD, SALE_TOT, QTY_TOT, "
+    sql += "JAMT, JQTY, DCAMT, DCQTY, GAMT, GQTY, "
+    sql += "R_JAMT, R_JQTY, R_DCAMT, R_DCQTY, R_GAMT, R_GQTY, "
+    sql += "ADVDEPAMT FROM ( "
+    sql += "SELECT VDCD, VDSNM, SUCD, SUM(JAMT+DCAMT+GAMT+ADVDEPAMT) AS SALE_TOT, SUM(JQTY+DCQTY+GQTY) AS QTY_TOT, "
+    sql += "SUM(JSAMT) JAMT, SUM(JSQTY) JQTY, SUM(DCSAMT) DCAMT, SUM(DCSQTY) DCQTY, SUM(GSAMT) GAMT, SUM(GSQTY) GQTY, "
+    sql += "SUM(JRAMT) R_JAMT, SUM(JRQTY) R_JQTY, SUM(DCRAMT) R_DCAMT, SUM(DCRQTY) R_DCQTY, SUM(GRAMT) R_GAMT, SUM(GRQTY) R_GQTY, "
+    sql += "SUM(ADVDEPAMT) ADVDEPAMT "
+    sql += "FROM BISL060 "
+    // sql += "WHERE " + tabType + " = '" + code + "' "
+    sql += "WHERE SALEDT BETWEEN '"+ start_date +"' AND '"+ end_date +"' "
+    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL060) ";
+    sql += "GROUP BY VDCD, VDSNM, SUCD "
+    if(code == 'A') {
+    sql += "HAVING " + tabType + " IN ('1', '12', '21', '4', '3', '5') "
+    } else if(code == '3') {
+    sql += "HAVING " + tabType + " IN ('" + code + "', '5') "
+    } else {
+    sql += "HAVING " + tabType + " = '" + code + "' "
+    }
+    sql += "ORDER BY SALE_TOT DESC "
+    sql += ")"
+
+    console.log("getStoreList >>> ", sql)
+
+    axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
+};
+
 // 당일 매출 순위
 exports.getsalesRanking = (req, res) => {
     console.log("============== getsalesRanking Call ======================");

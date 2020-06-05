@@ -31,7 +31,7 @@ exports.getStoreDailyList = (req, res) => {
     sql += "WHERE 1=1 "
     sql += "AND SALEDT = '"+ moment(date).format("YYYYMMDD") +"' "
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL060) ";
-    sql += "GROUP BY SUCD, VDCD, VDSNM, JAMT, JQTY, DCAMT, DCQTY, GAMT, GQTY, R_JAMT, R_JQTY, R_DCAMT, R_DCQTY, R_GAMT, R_GQTY, ADVDEPAMT "
+    sql += "GROUP BY SUCD, VDCD, VDSNM, JAMT, JQTY, DCAMT, DCQTY, GAMT, GQTY, R_JAMT, R_JQTY, R_DCAMT, R_DCQTY, R_GAMT, R_GQTY, ADVDEPAMT, " + tabType + " "
     sql += "HAVING " + tabType + " = '" + selectedCODE +  "' "
     sql += "AND VDCD IN ("
     for (let i=0;i<selectStoreList.length;i++) {
@@ -46,7 +46,7 @@ exports.getStoreDailyList = (req, res) => {
     sql += "GROUP BY VDCD, VDSNM "
     sql += ") "
     sql += "ORDER BY SALE_TOT DESC"
-
+    
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault));
 };
 
@@ -75,19 +75,19 @@ exports.getStoreMonthList = (req, res) => {
     sql += "WHERE 1=1 "
     sql += "AND SUBSTR(SALEDT,1,6) = '" + year + month +"' "
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL060) ";
-    sql += "GROUP BY SUCD, VDCD, VDSNM "
+    sql += "GROUP BY SUCD, VDCD, VDSNM, " + tabType + " "
     sql += "HAVING " + tabType + " = '" + selectedCODE +  "' "
     sql += "AND VDCD IN ("
     for (let i=0;i<selectStoreList.length;i++) {
-    sql += "'" + selectStoreList[i] + "'"
-    if (i < selectStoreList.length - 1) {
-        sql += ","
+        sql += "'" + selectStoreList[i] + "'"
+        if (i < selectStoreList.length - 1) {
+            sql += ","
     }
-    }
+}
     sql += ") "
     sql += "ORDER BY SALE_TOT DESC "
     sql += ")"
-
+    
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault));
 };
 
@@ -111,18 +111,19 @@ exports.getStoreCumulativeList = (req, res) => {
     sql += "WHERE 1=1 "
     sql += "AND SUBSTR(SALEDT,1,6) BETWEEN '"+ year + "01" +"' AND '" + year + "12" +"' "
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL060) ";
-    sql += "GROUP BY SUCD, VDCD, VDSNM "
+    sql += "GROUP BY SUCD, VDCD, VDSNM, " + tabType + " "
     sql += "HAVING " + tabType + " = '" + selectedCODE +  "' "
     sql += "AND VDCD IN ("
     for (let i=0;i<selectStoreList.length;i++) {
-    sql += "'" + selectStoreList[i] + "'"
-    if (i < selectStoreList.length - 1) {
-        sql += ","
-    }
+        sql += "'" + selectStoreList[i] + "'"
+        if (i < selectStoreList.length - 1) {
+            sql += ","
+        }
     }
     sql += ") "
     sql += "ORDER BY SALE_TOT DESC "
     sql += ")"
-
+    
+    console.log("getStoreCumulativeList >>>> ",sql );
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault));
 };
