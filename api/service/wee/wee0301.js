@@ -130,7 +130,7 @@ exports.getStyleDetail = (req, res) => {
     sql += "AND OUTDT IS NOT NULL ) "
     sql += "GROUP BY STYCD, OUTDT, SOJAENM, CUSTNM, TAGPRI ,COLCD "
     sql += ")"
-
+    console.log("============== 출고일 ======================"+sql);
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
 };
 

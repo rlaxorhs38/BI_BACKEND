@@ -47,13 +47,13 @@ exports.getSaleRate = (req, res) => {
     sql += "CASE WHEN INQTY = 0 THEN 0 ELSE ROUND(SQTY/INQTY ,2)*100 END SALERATE, "
     sql += "CASE WHEN SQTY = 0 THEN 0 ELSE ROUND(SILAMT/SQTY) END AVGPRI FROM ( "
     sql += "SELECT SUM(PQTY) PQTY, "
-    sql += "SUM(PQTY)*TAGPRI PAMT, "
+    sql += "SUM(PQTY*TAGPRI) PAMT, "
     sql += "SUM(INQTY) INQTY, "
     sql += "SUM(INAMT) INAMT, "
     sql += "SUM(SQTY) SQTY, "
     sql += "SUM(SILAMT) SILAMT, "
     sql += "SUM(INQTY) - (SUM(SQTY)+SUM(CHINASQTY)) STOCK, "
-    sql += "(SUM(INQTY) - (SUM(SQTY)+SUM(CHINASQTY)))*TAGPRI STOCKAMT "
+    sql += "(SUM(INQTY*TAGPRI) - (SUM(SQTY*TAGPRI)+SUM(CHINASQTY*TAGPRI))) STOCKAMT "
     sql += "FROM BIWE030 "
     sql += "WHERE MAINSTYCD IN (SELECT MAINSTYCD "
     sql += "FROM (SELECT SUM(SQTY) SQTY, "
@@ -318,7 +318,7 @@ exports.getStyle20 = (req, res) => {
     sql += "GROUP BY MAINSTYCD, DIMAGEPATH, SOJAENM, CUSTNM, TAGPRI "
     sql += "ORDER BY SQTY DESC"
     sql += ")"
-
+    console.log("============== 이거요 ======================"+sql);
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
 };
 
@@ -358,7 +358,7 @@ exports.getStyle20VDSNM = (req, res) => {
     }
     
     let sql = "SELECT COUNT(*) RN, MAX('TOTCNT') AS VDCD, SUM(0) AS SQTY  FROM ( "
-    sql += "SELECT VDCD "
+    sql += "SELECT COUNT(VDCD) RN "
     sql += "FROM BIWE030 "
     sql += "WHERE COMCD = '"+selectComcd+"' "
     sql += "AND SUCD = '"+selectSucd+"' "
@@ -368,6 +368,7 @@ exports.getStyle20VDSNM = (req, res) => {
     sql += "AND MAINSTYCD = '"+mainStycd+"' "
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIWE030) "
     sql += "AND SQTY > 0 "
+    sql += "GROUP BY VDSNM"
     sql += ") "
     sql += "UNION ALL "
     sql += "SELECT SUM(0) AS RN, VDSNM, SUM(SQTY) SQTY "

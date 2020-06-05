@@ -153,7 +153,7 @@ exports.getInDeCreaseStore = (req, res) => {
     if(sucd == 3) { // SO 사업부만 selectComcd 2
         comcd = 2
     }
-
+    
     if(sucd == 1) { // MI사업부
         brcd = "BRCD = 'MI'"
     } else if(sucd == 12) { // MO사업부
@@ -198,8 +198,9 @@ exports.getInDeCreaseStore = (req, res) => {
     sql += ") "
     sql += "GROUP BY SHTPNM, MVDCD, VDSNM, OPENDT "
     sql += ") "
-
-
+    
+    console.log("getInDeCreaseStore >>> ", sql);
+    
     // let sql = "SELECT SHTPNM, MVDCD, VDSNM, OPENDT, LASTYEARAMT, AMT, LASTYEARMONAMT, MONAMT MONAMT, MONAMT - LASTYEARMONAMT MONCHANGE, "
     // sql += "CASE WHEN LASTYEARMONAMT = 0 THEN 0 ELSE ROUND((MONAMT - LASTYEARMONAMT)/LASTYEARMONAMT*100, 2) END MONCHANGERR FROM ( "
     // sql += "SELECT SHTPNM, MVDCD, VDSNM, OPENDT, SUM(LASTYEARAMT) LASTYEARAMT, SUM(AMT) AMT, SUM(CNT1) CNT1, SUM(CNT2) CNT2, "
@@ -275,7 +276,7 @@ exports.getOpenCloseStore = (req, res) => {
     if(sucd == 3) { // SO 사업부만 selectComcd 2
         comcd = 2
     }
-
+    
     if(sucd == 1) { // MI사업부
         brcd = "BRCD = 'MI'"
     } else if(sucd == 12) { // MO사업부
@@ -287,7 +288,7 @@ exports.getOpenCloseStore = (req, res) => {
     } else if(sucd == 21) { // FO사업부
         brcd = "BRCD IN ('MI','IT','SO')"
     }
-
+    
     let sql = "SELECT COUNT(MVDCD) CNT, SUM(MONAMT - LASTYEARMONAMT) MONCHANGE FROM ( "
     sql += "SELECT SHTPNM, MVDCD, VDSNM, OPENDT, SHUTYN, SHTP, SUM(CNT1) CNT1, SUM(CNT2) CNT2, SUM(LASTYEARAMT) LASTYEARAMT, "
     sql += "CASE WHEN SUM(CNT1) = 0 THEN 0 ELSE ROUND(SUM(LASTYEARAMT)/SUM(CNT1), 0) END LASTYEARMONAMT, "
@@ -348,8 +349,9 @@ exports.getOpenCloseStore = (req, res) => {
     sql += "GROUP BY SHTPNM, MVDCD, VDSNM, OPENDT, SHUTYN, SHTP "
     sql += ") "
     sql += "WHERE VDSNM LIKE '%철수%' "  
-
-
+    
+    console.log(" getOpenCloseStore >>> ", sql);
+    
     // let sql = "SELECT COUNT(VDCD) CNT, "
     // sql += "SUM(SILAMT) SILAMT "
     // sql += "FROM (SELECT VDCD, "
