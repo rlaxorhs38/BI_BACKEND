@@ -316,7 +316,7 @@ exports.getStyle20 = (req, res) => {
     sql += "AND INOUTDT BETWEEN '"+paramStartDate+"' AND '"+paramEndDate+"' "
     sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIWE030) "
     sql += "GROUP BY MAINSTYCD, DIMAGEPATH, SOJAENM, CUSTNM, TAGPRI "
-    sql += "ORDER BY SQTY DESC"
+    sql += "ORDER BY SQTY DESC, OUTDT DESC"
     sql += ")"
     console.log("============== 이거요 ======================"+sql);
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
