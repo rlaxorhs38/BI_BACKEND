@@ -21,6 +21,7 @@ router.get('/getITOnOffSaleList', service.getITOnOffSaleList);
 router.get('/getBaseSaleList', service.getBaseSaleList);
 router.get('/getDailySaleList', service.getDailySaleList);
 router.get('/getMonthlySaleList', service.getMonthlySaleList);
+router.get('/geJasaSaleList', service.geJasaSaleList);
 
 router.get('/getMonthlySaleList_POP', service.getDailySaleList_POP);
 

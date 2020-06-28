@@ -994,3 +994,57 @@ exports.getDailySaleList_POP = (req, res) => {
     
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault));
 };
+
+exports.geJasaSaleList = (req, res) => {
+    console.log("============== getJasaSaleCompare Call ======================");
+
+    let gubun = req.query.gubun;
+    let basedt = req.query.basedt;
+    let yyyy = basedt.substr(0, 4);
+    console.log("yyyy !!!!! >>" , yyyy)
+    let sucd = req.query.sucd;
+
+    let column = ""
+    if(gubun == 1) {
+        column = "ORDER_AMT"
+    } else if(gubun == 2) {
+        column = "SELL_AMT"
+    } else {
+        column = "PAY_AMT"
+    }
+
+    let sql = "SELECT " + (sucd == "00"?"'00' AS ":"") + "SUCD, SUBSTR(ORDER_DT, 5, 2) AS ORDER_DT, ";
+    sql += "    ROUND(SUM(YEAR)/1000000) AS YEAR, ";
+    sql += "    ROUND(SUM(LAST)/1000000) AS LAST  ";
+    sql += "FROM ( ";
+    sql += "    SELECT SUCD, BRCD, ";
+    sql += "        SUBSTR(ORDER_DT, 1, 6) AS ORDER_DT, ";
+    sql += "        SUM(" + column + ") AS YEAR, ";
+    sql += "        0 AS LAST  ";
+    sql += "    FROM   BION070 ";
+    sql += "    WHERE  ORDER_DT BETWEEN '" + yyyy +"0101' AND '" + basedt +"' ";
+    if(sucd != "00") {
+        sql += "    AND    SUCD = '" + sucd +"' ";
+    }
+    sql += "    AND    SUCD NOT IN ('EX') ";
+    sql += "    GROUP BY SUCD, BRCD, ORDER_DT ";
+    sql += "    UNION ALL ";
+    sql += "    SELECT SUCD, BRCD, ";
+    sql += "        SUBSTR(ORDER_DT, 1, 6) AS ORDER_DT, ";
+    sql += "        0 AS YEAR, ";
+    sql += "        SUM(" + column + ") AS LAST  ";
+    sql += "    FROM   BION070 ";
+    sql += "    WHERE  ORDER_DT BETWEEN '" + (Number(yyyy)-1) +"0101' AND '" + (Number(yyyy)-1) + basedt.substr(4) + "' ";
+    if(sucd != "00") {
+        sql += "    AND    SUCD = '" + sucd +"' ";
+    }
+    sql += "    AND    SUCD NOT IN ('EX') ";
+    sql += "    GROUP BY SUCD, BRCD, ORDER_DT ";
+    sql += ") ";
+    sql += "GROUP BY " + (sucd == "00"?"":"SUCD, ") + "ORDER_DT ";
+    sql += "ORDER BY ORDER_DT ";
+
+    console.log("getJasaSaleCompare >>>", sql);
+
+    axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
+};

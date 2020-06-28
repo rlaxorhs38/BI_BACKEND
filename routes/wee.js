@@ -3,6 +3,7 @@ const wee0101 = require('../api/service/wee/wee0101')
 const wee0201 = require('../api/service/wee/wee0201')
 const wee0301 = require('../api/service/wee/wee0301')
 const wee0401 = require('../api/service/wee/wee0401')
+const wee0501 = require('../api/service/wee/wee0501')
 var router = express.Router();
 
 /* COMMON */
@@ -37,5 +38,9 @@ router.post('/getWeeklySale', wee0401.getWeeklySale);
 router.post('/getWeeklySSUM', wee0401.getWeeklySSUM);
 router.post('/getWeeklyTSUM', wee0401.getWeeklyTSUM);
 router.post('/getWeeklyGraph', wee0401.getWeeklyGraph);
+
+/* WEE0501 */
+router.get('/getSaleListByBrand', wee0501.getSaleListByBrand);
+router.get('/getProgressData', wee0501.getProgressData);
 
 module.exports = router;
