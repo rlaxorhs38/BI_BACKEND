@@ -42,5 +42,7 @@ router.post('/getWeeklyGraph', wee0401.getWeeklyGraph);
 /* WEE0501 */
 router.get('/getSaleListByBrand', wee0501.getSaleListByBrand);
 router.get('/getProgressData', wee0501.getProgressData);
+router.get('/getTakeChargeList', wee0501.getTakeChargeList);
+router.get('/getStoreSaleByCharge', wee0501.getStoreSaleByCharge);
 
 module.exports = router;

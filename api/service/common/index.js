@@ -64,7 +64,6 @@ exports.getAssignedSUList = (req, res, next) => {
     let sql = "SELECT GBNCD, MCODE, CODNM, SORTORD FROM ";
     sql += "(SELECT GBNCD, MCODE FROM BIGR010 ";
     sql += "WHERE EMPCD = '" + empcd + "' "; 
-    sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIGR010) "
     sql += "AND GRTCD = 'BI1001' ";
     sql += "AND VIEWYN = 'Y') A, ";
     sql += "(SELECT CODE, CODNM, SORTORD FROM BICM011 ";
