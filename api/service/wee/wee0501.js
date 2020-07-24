@@ -38,7 +38,15 @@ exports.getProgressData = (req, res) => {
     let mm = req.query.mm;
     let week = req.query.week;
 
-    let sql = "SELECT  COMCD, SUCD,  ";
+    let sql = "SELECT "
+    sql += "        CASE " 
+    sql += "            WHEN COMCD = '3' THEN '2' "
+    sql += "            ELSE COMCD "
+    sql += "        END COMCD, "
+    sql += "        CASE  "
+    sql += "            WHEN SUCD = '5' THEN '3' "
+    sql += "            ELSE SUCD "
+    sql += "        END SUCD,  ";
     sql += "        DECODE(SUCD, '1', 'MI', '12', 'MO', '21', 'FO', '4', 'IT', '3', 'SO', '5', 'SO') AS BRCD,  ";
     sql += "        YYYY, MM, WEEK, FROM_SALEDT, TO_SALEDT, PROGRESS, PLAN, TEMP_SAVE, ";
     sql += "        DECODE(SUCD, '1', '1', '12', '2', '21', '3', '4', '4', '3', '5', '5', '5') AS SORT ";
@@ -61,7 +69,15 @@ exports.getTakeChargeList = (req, res) => {
     let mm = req.query.mm;
     let week = req.query.week;
 
-    let sql = "SELECT DISTINCT(MEMP) AS MEMP, ERPNM, COMCD, SUCD,   ";
+    let sql = "SELECT DISTINCT(MEMP) AS MEMP, ERPNM,   ";
+        sql += "        CASE " 
+        sql += "            WHEN COMCD = '3' THEN '2' "
+        sql += "            ELSE COMCD "
+        sql += "        END COMCD, "
+        sql += "        CASE  "
+        sql += "            WHEN SUCD = '5' THEN '3' "
+        sql += "            ELSE SUCD "
+        sql += "        END SUCD,  ";
         sql += "    DECODE(SUCD, '1', '1', '12', '2', '21', '3', '4', '4', '3', '5', '5', '5') AS SORT,  ";
         sql += "    DECODE(SUCD, '1', 'MI', '12', 'MO', '21', 'FO', '4', 'IT', '3', 'SO', '5', 'SO') AS BRCD  ";
         sql += "FROM BIWE060 A  ";
@@ -71,7 +87,10 @@ exports.getTakeChargeList = (req, res) => {
         sql += "AND A.TEMP_SAVE IN (  ";
         sql += "                    SELECT MAX(B.TEMP_SAVE)  ";
         sql += "                    FROM BIWE060 B  ";
-        sql += "                    WHERE B.TEMP_SAVE > '2000'  ";
+        sql += "                    WHERE YYYY = '" + yyyy + "'  ";
+        sql += "                    AND MM = '" + mm + "'  ";
+        sql += "                    AND WEEK = '" + week + "'  ";
+        sql += "                    AND B.TEMP_SAVE > '2000'  ";
         sql += "                    )  ";
         sql += "ORDER BY SORT,MEMP  ";
 
@@ -88,8 +107,15 @@ exports.getStoreSaleByCharge = (req, res) => {
     let week = req.query.week;
     
     let sql = "SELECT *  ";
-    sql += "FROM   (SELECT COMCD,  ";
-    sql += "            SUCD,  ";
+    sql += "FROM   (SELECT  ";
+    sql += "            CASE " 
+    sql += "                WHEN COMCD = '3' THEN '2' "
+    sql += "                ELSE COMCD "
+    sql += "            END COMCD, "
+    sql += "            CASE  "
+    sql += "                WHEN SUCD = '5' THEN '3' "
+    sql += "                ELSE SUCD "
+    sql += "            END SUCD,  ";
     sql += "            DECODE(SUCD, '1', '1', '12', '2', '21', '3', '4', '4', '3', '5', '5', '5') AS SORT,  ";
     sql += "            DECODE(SUCD, '1', 'MI', '12', 'MO', '21', 'FO', '4', 'IT', '3', 'SO', '5', 'SO') AS BRCD,  ";
     sql += "            YYYY,  ";
@@ -99,6 +125,11 @@ exports.getStoreSaleByCharge = (req, res) => {
     sql += "            TO_SALEDT,  ";
     sql += "            MEMP,  ";
     sql += "            ERPNM,  ";
+    sql += "            CASE  ";
+    sql += "                WHEN COMCD = '3' THEN 'Z'||MVDCD  ";
+    sql += "                ELSE MVDCD  ";
+    sql += "            END MVDCD,  ";
+    // sql += "            MVDCD,  ";
     sql += "            VDCD,  ";
     sql += "            VDSNM,  ";
     sql += "            BIRTH,  ";
@@ -122,11 +153,21 @@ exports.getStoreSaleByCharge = (req, res) => {
     sql += "        AND    A.TEMP_SAVE IN (  ";
     sql += "                                SELECT MAX(B.TEMP_SAVE)  ";
     sql += "                                FROM BIWE060 B  ";
-    sql += "                                WHERE B.TEMP_SAVE > '2000'  ";
+    sql += "                                WHERE YYYY = '" + yyyy + "'  ";
+    sql += "                                AND MM = '" + mm + "'  ";
+    sql += "                                AND WEEK = '" + week + "'  ";
+    sql += "                                AND B.TEMP_SAVE > '2000'  ";
     sql += "                                )  ";
     sql += "        UNION ALL  ";
-    sql += "        SELECT COMCD,  ";
-    sql += "            SUCD,  ";
+    sql += "        SELECT  ";
+    sql += "            CASE " 
+    sql += "                WHEN COMCD = '3' THEN '2' "
+    sql += "                ELSE COMCD "
+    sql += "            END COMCD, "
+    sql += "            CASE  "
+    sql += "                WHEN SUCD = '5' THEN '3' "
+    sql += "                ELSE SUCD "
+    sql += "            END SUCD,  ";
     sql += "            DECODE(SUCD, '1', '1', '12', '2', '21', '3', '4', '4', '3', '5', '5', '5') AS SORT,  ";
     sql += "            DECODE(SUCD, '1', 'MI', '12', 'MO', '21', 'FO', '4', 'IT', '3', 'SO', '5', 'SO') AS BRCD,  ";
     sql += "            YYYY,  ";
@@ -137,6 +178,7 @@ exports.getStoreSaleByCharge = (req, res) => {
     sql += "            MEMP,  ";
     sql += "            ERPNM,  ";
     sql += "            'ZZ000' AS VDCD,  ";
+    sql += "            'ZZ000' AS MVDCD,  ";
     sql += "            '' VDSNM,  ";
     sql += "            '' BIRTH,  ";
     sql += "            '' HNAME,  ";
@@ -173,10 +215,13 @@ exports.getStoreSaleByCharge = (req, res) => {
     sql += "        AND    A.TEMP_SAVE IN (  ";
     sql += "                                SELECT MAX(B.TEMP_SAVE)  ";
     sql += "                                FROM BIWE060 B  ";
-    sql += "                                WHERE B.TEMP_SAVE > '2000'  ";
+    sql += "                                WHERE YYYY = '" + yyyy + "'  ";
+    sql += "                                AND MM = '" + mm + "'  ";
+    sql += "                                AND WEEK = '" + week + "'  ";
+    sql += "                                AND B.TEMP_SAVE > '2000'  ";
     sql += "                                )  ";
     sql += "        GROUP BY COMCD, SUCD, SORT, BRCD, YYYY, MM, WEEK, FROM_SALEDT, TO_SALEDT, MEMP, ERPNM )  ";
-    sql += "ORDER BY SORT, MEMP, VDCD  ";
+    sql += "ORDER BY SORT, MEMP, MVDCD, VDCD  ";
 
     console.log("getStoreSaleByCharge >>>", sql);
 
