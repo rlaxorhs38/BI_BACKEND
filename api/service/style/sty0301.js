@@ -65,3 +65,14 @@ exports.getFabricsCodeList = (req, res) => {
 
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
 };
+
+
+exports.getColorsCodeList = (req, res) => {
+  console.log("============== getColorsCodeList Call ======================");
+
+  let sql = "SELECT * FROM BICM013 "
+  sql += "WHERE BRCD = 'MI' "
+  sql += "ORDER BY COLCD "
+
+  axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
+};

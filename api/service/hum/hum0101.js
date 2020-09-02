@@ -130,6 +130,7 @@ exports.getChageChgucdGuData = (req, res, next) => {
     }
     sql += "GROUP BY SI, GU ";
     sql += "ORDER BY SI, GU";
+    console.log("getChageChgucdGuData >>>", sql);
 
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
 };
@@ -172,6 +173,9 @@ exports.getSDInfo = (req, res, next) => {
     let choice = req.body.params.choice;
     let year = req.body.params.year;
     let month = req.body.params.month;
+    let region = req.body.params.region;
+
+    console.log(selectedCODE, " / ", choice , " / ", year , " / ", region )
     
     if (month.toString().length == 1) {
       month = "0" + month
@@ -181,14 +185,18 @@ exports.getSDInfo = (req, res, next) => {
     let sql = "";
     if(selectedCODE == "other"){ // 타사일때
       sql += "SELECT VDCD, SNO, NAME, BRCD, BRNM, SUCD, CHGUCD, CHGUNM, ONEAVGAMT, VDSNM, HRID FROM BIHR050 ";
-      sql += "WHERE SNO IN ("
-      for (let i=0;i<vdcdData.length;i++) {
-          sql += "" + vdcdData[i].SNO + ""
-          if (i < vdcdData.length - 1) {
-          sql += ","
-          }
+      if(region == '전국') {
+        sql += "WHERE COMPANYCD = '2' "
+      } else {
+        sql += "WHERE SNO IN ("
+        for (let i=0;i<vdcdData.length;i++) {
+            sql += "" + vdcdData[i].SNO + ""
+            if (i < vdcdData.length - 1) {
+            sql += ","
+            }
+        }
+        sql += ") "
       }
-      sql += ") "
       sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIHR050) ";
       sql += "ORDER BY ONEAVGAMT DESC ";
     } else { // 자사SD전체 및 브랜드일때
@@ -224,7 +232,8 @@ exports.getSDInfo = (req, res, next) => {
         sql += "AND CREATEDATE = (SELECT MAX(CREATEDATE) FROM BIHR050))B ";
         sql += "WHERE A.MVDCD = B.VDCD ";
         sql += "ORDER BY TOT_AMT DESC ";
-    }
+
+      }
 
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
 };

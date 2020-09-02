@@ -38,5 +38,6 @@ router.get('/getStoreKind', sty0301.getStoreKind);
 router.get('/getstoreList', sty0301.getstoreList);
 router.get('/getClothCodeList', sty0301.getClothCodeList);
 router.get('/getFabricsCodeList', sty0301.getFabricsCodeList);
+router.get('/getColorsCodeList', sty0301.getColorsCodeList);
 
 module.exports = router;

@@ -281,7 +281,23 @@ exports.getStyleTopData = (req, res) => {
         c_sql += "AND SOJAE IS NULL "
       }
     }
-
+    
+    if(filterData.color_a){ // 컬러 전체 선택
+    } else {
+      if (filterData.colors.length > 0) { // 컬러
+        c_sql += "AND COLCD IN ("
+        for (let i=0;i<filterData.colors.length;i++) {
+          c_sql += "'" + filterData.colors[i] + "'"
+          if (i < filterData.colors.length - 1) {
+            c_sql += ","
+          }
+        }
+        c_sql += ") "
+      } else {
+        c_sql += "AND COLCD IS NULL "
+      }
+    }
+    
     if(filterData.releaseCodes == "RELEASEALL"){ // 출고유형 전체 선택
     } else {
       if(filterData.releaseCodes == "00"){

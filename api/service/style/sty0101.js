@@ -39,6 +39,7 @@ exports.getKindOfStyle = (req, res) => {
     sql += "AND SUCD = '" + SUCD + "' "
     sql += "GROUP BY STYCD, MAINSTYCD, RESEQ "
     sql += "ORDER BY RESEQ"
+    console.log("getKindOfStyle >>> "+sql);
 
     axios.get(db.DB_URL + '?q=' + encodeURIComponent(sql)).then(x => x.data).then(reault => res.send(reault))
 };
