@@ -52,6 +52,14 @@ exports.getsalesRanking = (req, res) => {
 
     let year = date.substr(0, 4);
     let month = date.substr(5, 2);
+    let day = date.substr(8,2);
+    let selectDay = year + month + day;
+    let lastYear = (Number(year)-1).toString();
+    let firstDayOfMonth = year + month + "01"; // 당월 1일
+    let firstDayOfYear = year + "0101"; // 당년 1월 1일
+    let dayOfLastYear = lastYear + month + day; // 작년 동월 동일
+    let firstDayOfMonthOfLastYear = lastYear + month + "01"; // 작년 동월 1일
+    let firstDayOfLastYear = lastYear + "0101"; // 작년 1월 1일
 
     // 매출 추이 누적
     let sql = "SELECT ROWNUM() RN, VDCD, VDSNM, "
@@ -62,7 +70,7 @@ exports.getsalesRanking = (req, res) => {
     sql += "            SUM(SALE_TOT) AS SALE_TOT, SUM(PRE_SALE_TOT) AS PRE_SALE_TOT, "
     sql += "            SUM(QTY_TOT) AS QTY_TOT, SUM(TARGETAMT) AS TARGETAMT, "
     sql += "            CASE WHEN SUM(PRE_SALE_TOT) = 0 THEN 0 "
-    sql += "                    ELSE ROUND(SUM(SALE_TOT)/SUM(PRE_SALE_TOT)*100, 0) "
+    sql += "                    ELSE ROUND((SUM(SALE_TOT)-SUM(PRE_SALE_TOT))/SUM(PRE_SALE_TOT)*100, 0) "
     sql += "            END AS GROWTH_RATE, "
     sql += "            CASE WHEN SUM(TARGETAMT) = 0 THEN 0 "
     sql += "                    ELSE ROUND(SUM(SALE_TOT)/SUM(TARGETAMT)*100, 0) "
@@ -74,9 +82,9 @@ exports.getsalesRanking = (req, res) => {
     sql += "                    MAX(MEMPNM) AS MEMPNM "
     sql += "                FROM   BISL060 "
     if(searchType == "2") {
-        sql += "                WHERE  SUBSTR(SALEDT, 1, 6) BETWEEN '" + year + month + "' AND '" + year + month + "' "
+        sql += "                WHERE  SALEDT BETWEEN '" + firstDayOfMonth + "' AND '" + selectDay + "' "
     } else {
-        sql += "                WHERE  SUBSTR(SALEDT, 1, 6) BETWEEN '" + year + "01' AND '" + year + month + "' "
+        sql += "                WHERE  SALEDT BETWEEN '" + firstDayOfYear + "' AND '" + selectDay + "' "
     }
     sql += "                AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL060) "
     sql += "                GROUP BY VDCD, VDSNM, SUCD "
@@ -91,9 +99,9 @@ exports.getsalesRanking = (req, res) => {
     sql += "                    0 AS QTY_TOT, 0 AS TARGETAMT, '' AS MEMPNM "
     sql += "                FROM   BISL060 "
     if(searchType == "2") {
-        sql += "                WHERE  SUBSTR(SALEDT, 1, 6) BETWEEN '" + (Number(year)-1).toString() + month + "' AND '" + (Number(year)-1).toString() + month + "' "
+        sql += "                WHERE  SALEDT BETWEEN '" + firstDayOfMonthOfLastYear + "' AND '" + dayOfLastYear + "' "
     } else {
-        sql += "                WHERE  SUBSTR(SALEDT, 1, 6) BETWEEN '" + (Number(year)-1).toString() + "01' AND '" + (Number(year)-1).toString() + month + "' "
+        sql += "                WHERE  SALEDT BETWEEN '" + firstDayOfLastYear + "' AND '" + dayOfLastYear + "' "
     }
     sql += "                AND    CREATEDATE = (SELECT MAX(CREATEDATE) FROM BISL060) "
     sql += "                GROUP BY VDCD, VDSNM, SUCD "
